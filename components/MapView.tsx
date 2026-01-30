@@ -383,7 +383,25 @@ export default function MapView({
           </>
         )}
 
-        {/* Division Labels */}
+        {/* Addresses Layer */}
+        {addressesData && (
+          <Source id="addresses" type="geojson" data={addressesData}>
+            <Layer
+              id="addresses-points"
+              type="circle"
+              paint={{
+                "circle-radius": 5,
+                "circle-color": "#F59E0B",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+                "circle-opacity": visibleLayers.addresses ? 0.8 : 0,
+                "circle-stroke-opacity": visibleLayers.addresses ? 1 : 0,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Division Labels - Rendered LAST to appear on top of everything */}
         {divisionsData && visibleLayers.divisions && (
           <Source
             id="division-labels"
@@ -402,34 +420,18 @@ export default function MapView({
               type="symbol"
               layout={{
                 "text-field": ["get", "name"],
-                "text-size": 16,
+                "text-size": 18,
                 "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
                 "text-transform": "uppercase",
-                "text-letter-spacing": 0.1,
+                "text-letter-spacing": 0.15,
                 "text-allow-overlap": true,
+                "text-ignore-placement": true,
+                "symbol-sort-key": 999,
               }}
               paint={{
                 "text-color": "#ffffff",
-                "text-halo-color": "rgba(0, 0, 0, 0.8)",
-                "text-halo-width": 2,
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Addresses Layer */}
-        {addressesData && (
-          <Source id="addresses" type="geojson" data={addressesData}>
-            <Layer
-              id="addresses-points"
-              type="circle"
-              paint={{
-                "circle-radius": 5,
-                "circle-color": "#F59E0B",
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
-                "circle-opacity": visibleLayers.addresses ? 0.8 : 0,
-                "circle-stroke-opacity": visibleLayers.addresses ? 1 : 0,
+                "text-halo-color": "rgba(0, 0, 0, 0.9)",
+                "text-halo-width": 2.5,
               }}
             />
           </Source>
