@@ -174,10 +174,12 @@ function SizeRangeSlider({
   value,
   bounds,
   onChange,
+  parcelCount,
 }: {
   value: SizeRange;
   bounds: SizeRange;
   onChange: (range: SizeRange) => void;
+  parcelCount?: number;
 }) {
   // Convert to acres for display
   const minAcres = sqmtToAcres(value.min);
@@ -186,11 +188,15 @@ function SizeRangeSlider({
   const boundsMaxAcres = sqmtToAcres(bounds.max);
 
   const handleMinChange = (newMin: number) => {
-    onChange({ min: Math.min(newMin, value.max), max: value.max });
+    // Ensure min doesn't exceed max
+    const clampedMin = Math.min(newMin, value.max - 1);
+    onChange({ min: Math.max(bounds.min, clampedMin), max: value.max });
   };
 
   const handleMaxChange = (newMax: number) => {
-    onChange({ min: value.min, max: Math.max(newMax, value.min) });
+    // Ensure max doesn't go below min
+    const clampedMax = Math.max(newMax, value.min + 1);
+    onChange({ min: value.min, max: Math.min(bounds.max, clampedMax) });
   };
 
   const handleMinAcresChange = (newMinAcres: number) => {
@@ -214,54 +220,70 @@ function SizeRangeSlider({
         <span>{formatSizeDisplay(value.max)}</span>
       </div>
 
-      {/* Dual range slider */}
+      {/* Dual range slider - using two separate range inputs with proper z-indexing */}
       <div className="relative h-6">
         {/* Track background */}
         <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 bg-slate-700 rounded-full" />
         
         {/* Active track */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-1.5 bg-teal-500 rounded-full"
+          className="absolute top-1/2 -translate-y-1/2 h-1.5 bg-teal-500 rounded-full pointer-events-none"
           style={{
             left: `${minPercent}%`,
             right: `${100 - maxPercent}%`,
           }}
         />
 
-        {/* Min slider */}
+        {/* Min slider - positioned for left half interaction */}
         <input
           type="range"
           min={bounds.min}
           max={bounds.max}
           value={value.min}
           onChange={(e) => handleMinChange(Number(e.target.value))}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-          style={{ pointerEvents: "auto" }}
+          className="range-slider range-slider-min"
+          style={{
+            background: 'transparent',
+            zIndex: minPercent > 50 ? 5 : 3,
+          }}
         />
 
-        {/* Max slider */}
+        {/* Max slider - positioned for right half interaction */}
         <input
           type="range"
           min={bounds.min}
           max={bounds.max}
           value={value.max}
           onChange={(e) => handleMaxChange(Number(e.target.value))}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-          style={{ pointerEvents: "auto" }}
+          className="range-slider range-slider-max"
+          style={{
+            background: 'transparent',
+            zIndex: maxPercent <= 50 ? 5 : 4,
+          }}
         />
 
         {/* Min thumb visual */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none z-10"
-          style={{ left: `calc(${minPercent}% - 8px)` }}
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none"
+          style={{ left: `calc(${minPercent}% - 8px)`, zIndex: 10 }}
         />
 
         {/* Max thumb visual */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none z-10"
-          style={{ left: `calc(${maxPercent}% - 8px)` }}
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none"
+          style={{ left: `calc(${maxPercent}% - 8px)`, zIndex: 10 }}
         />
       </div>
+
+      {/* Parcel count indicator */}
+      {parcelCount !== undefined && (
+        <div className="text-center">
+          <span className="text-xs font-medium text-teal-400">
+            {parcelCount.toLocaleString()}
+          </span>
+          <span className="text-xs text-slate-400"> parcels in range</span>
+        </div>
+      )}
 
       {/* Manual inputs in acres */}
       <div className="flex gap-2 items-center">
@@ -433,6 +455,7 @@ export default function LayerControls({
               value={sizeRange}
               bounds={sizeBounds}
               onChange={onSizeRangeChange}
+              parcelCount={parcelCounts?.displayed}
             />
           </div>
 

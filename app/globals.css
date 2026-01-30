@@ -104,6 +104,43 @@ body {
   background: rgba(100, 116, 139, 0.5);
 }
 
+/* Range slider styling */
+.range-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  cursor: pointer;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  border: none;
+}
+
+.range-slider:focus {
+  outline: none;
+}
+
 /* Toggle switch */
 .toggle-switch {
   position: relative;
