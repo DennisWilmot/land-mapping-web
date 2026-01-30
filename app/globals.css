@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --boundary-color: #3B82F6;
+  --parcel-fill: rgba(20, 184, 166, 0.4);
+  --parcel-stroke: #ffffff;
+  --parcel-hover: rgba(45, 212, 191, 0.6);
+  --panel-bg: rgba(17, 24, 39, 0.85);
+  --panel-border: rgba(75, 85, 99, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: #0f172a;
+  color: #f1f5f9;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Mapbox overrides for dark theme */
+.mapboxgl-popup-content {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: var(--panel-bg) !important;
+}
+
+.mapboxgl-ctrl-group {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border) !important;
+}
+
+.mapboxgl-ctrl-group button {
+  background-color: transparent !important;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapboxgl-ctrl-group button span {
+  filter: invert(1);
+}
+
+/* Glass panel styling */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch.active {
+  background: var(--boundary-color);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch.active::after {
+  transform: translateX(20px);
+}
