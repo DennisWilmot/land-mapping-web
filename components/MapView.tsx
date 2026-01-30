@@ -74,9 +74,12 @@ export default function MapView({
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
   const [sizeRange, setSizeRange] = useState<{ min: number; max: number }>({ min: 0, max: Infinity });
 
-  // Compute size bounds from parcel data
+  // Compute size bounds from parcel data (capped at 14,000 acres max)
+  const MAX_ACRES = 14000;
+  const MAX_SQMT = MAX_ACRES * 4046.86; // ~56.6 million m²
+  
   const sizeBounds = useMemo(() => {
-    if (!parcelsData) return { min: 0, max: 100000 };
+    if (!parcelsData) return { min: 0, max: MAX_SQMT };
     
     let min = Infinity;
     let max = 0;
@@ -91,7 +94,7 @@ export default function MapView({
     
     return { 
       min: min === Infinity ? 0 : Math.floor(min), 
-      max: max === 0 ? 100000 : Math.ceil(max) 
+      max: Math.min(max === 0 ? MAX_SQMT : Math.ceil(max), MAX_SQMT)
     };
   }, [parcelsData]);
 
@@ -507,6 +510,18 @@ export default function MapView({
         sizeBounds={sizeBounds}
         onSizeRangeChange={setSizeRange}
       />
+
+      {/* Stats Card - Top Right */}
+      {parcelCounts && (
+        <div className="absolute top-4 right-4 z-10 glass-panel px-4 py-3">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-teal-400">
+              {parcelCounts.displayed.toLocaleString()}
+            </div>
+            <div className="text-xs text-slate-400">parcels shown</div>
+          </div>
+        </div>
+      )}
 
       {/* Details Panel */}
       <DetailsPanel

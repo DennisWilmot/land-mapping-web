@@ -434,14 +434,9 @@ export default function LayerControls({
               label="Known Owners"
               color="#10B981"
             />
-            {parcelCounts && (
-              <div className="text-xs text-slate-500 pl-5">
-                <span>{parcelCounts.displayed.toLocaleString()} parcels shown</span>
-                {ownersOnly && (
-                  <span className="block text-emerald-400/70">
-                    {parcelCounts.withOwners.toLocaleString()} with owner data
-                  </span>
-                )}
+            {parcelCounts && ownersOnly && (
+              <div className="text-xs text-emerald-400/70 pl-5">
+                {parcelCounts.withOwners.toLocaleString()} with owner data
               </div>
             )}
           </div>
@@ -455,7 +450,6 @@ export default function LayerControls({
               value={sizeRange}
               bounds={sizeBounds}
               onChange={onSizeRangeChange}
-              parcelCount={parcelCounts?.displayed}
             />
           </div>
 
