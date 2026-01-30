@@ -11,6 +11,9 @@ interface LayerControlsProps {
   onToggleLayer: (layer: "boundary" | "parcels" | "addresses") => void;
   mapStyle: MapStyle;
   onToggleMapStyle: () => void;
+  nemOnly: boolean;
+  onToggleNemOnly: () => void;
+  parcelCounts?: { total: number; nem: number };
 }
 
 function Toggle({
@@ -51,9 +54,12 @@ export default function LayerControls({
   onToggleLayer,
   mapStyle,
   onToggleMapStyle,
+  nemOnly,
+  onToggleNemOnly,
+  parcelCounts,
 }: LayerControlsProps) {
   return (
-    <div className="absolute top-4 left-4 z-10 glass-panel p-4 min-w-[180px]">
+    <div className="absolute top-4 left-4 z-10 glass-panel p-4 min-w-[200px]">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
         Layers
       </h3>
@@ -77,6 +83,28 @@ export default function LayerControls({
           label="Addresses"
           color="#F59E0B"
         />
+      </div>
+
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+        Filter
+      </h3>
+      
+      <div className="space-y-2 border-b border-slate-700 pb-3 mb-3">
+        <Toggle
+          active={nemOnly}
+          onClick={onToggleNemOnly}
+          label="NEM Only"
+          color="#8B5CF6"
+        />
+        {parcelCounts && (
+          <div className="text-xs text-slate-500 pl-5">
+            {nemOnly ? (
+              <span>{parcelCounts.nem.toLocaleString()} parcels in NEM</span>
+            ) : (
+              <span>{parcelCounts.total.toLocaleString()} total parcels</span>
+            )}
+          </div>
+        )}
       </div>
 
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">

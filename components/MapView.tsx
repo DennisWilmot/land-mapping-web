@@ -1,15 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Map, {
   Source,
   Layer,
   MapRef,
   MapLayerMouseEvent,
-  Popup,
 } from "react-map-gl";
-import type { FeatureCollection, Polygon, Point } from "geojson";
+import type { FeatureCollection, Polygon, Point, Feature } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+import centroid from "@turf/centroid";
 
 import { manchesterNorthEasternBoundary, boundaryCenter, boundaryZoom } from "@/lib/geo/boundary";
 import type { ParcelProperties } from "@/lib/data/parcels";
@@ -51,6 +52,7 @@ export default function MapView({
   const [hoveredFeature, setHoveredFeature] = useState<HoveredFeature | null>(null);
   const [selectedParcel, setSelectedParcel] = useState<ParcelProperties | null>(null);
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
+  const [nemOnly, setNemOnly] = useState(false);
 
   const mapStyleUrl = useMemo(() => {
     return mapStyle === "satellite"
@@ -140,17 +142,48 @@ export default function MapView({
     }));
   }, []);
 
-  // Add feature IDs to parcels data for hover state
-  const parcelsWithIds = useMemo(() => {
-    if (!parcelsData) return null;
-    return {
-      ...parcelsData,
-      features: parcelsData.features.map((feature, index) => ({
+  // Get the boundary polygon for filtering
+  const boundaryPolygon = useMemo(() => {
+    const feature = manchesterNorthEasternBoundary.features[0];
+    return feature as Feature<Polygon>;
+  }, []);
+
+  // Filter parcels to NEM only and add feature IDs
+  const { parcelsWithIds, parcelCounts } = useMemo(() => {
+    if (!parcelsData) return { parcelsWithIds: null, parcelCounts: { total: 0, nem: 0 } };
+    
+    // First, calculate which parcels are in NEM (do this once)
+    const parcelsWithNemFlag = parcelsData.features.map((feature, index) => {
+      const center = centroid(feature);
+      const isInNem = booleanPointInPolygon(center, boundaryPolygon);
+      return {
         ...feature,
         id: feature.properties?.OBJECTID || index,
-      })),
+        properties: {
+          ...feature.properties,
+          _isInNem: isInNem,
+        },
+      };
+    });
+
+    const nemCount = parcelsWithNemFlag.filter(f => f.properties._isInNem).length;
+    
+    // Filter based on nemOnly toggle
+    const filteredFeatures = nemOnly 
+      ? parcelsWithNemFlag.filter(f => f.properties._isInNem)
+      : parcelsWithNemFlag;
+
+    return {
+      parcelsWithIds: {
+        ...parcelsData,
+        features: filteredFeatures,
+      },
+      parcelCounts: {
+        total: parcelsData.features.length,
+        nem: nemCount,
+      },
     };
-  }, [parcelsData]);
+  }, [parcelsData, nemOnly, boundaryPolygon]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -282,6 +315,9 @@ export default function MapView({
         onToggleLayer={toggleLayer}
         mapStyle={mapStyle}
         onToggleMapStyle={() => setMapStyle(mapStyle === "satellite" ? "streets" : "satellite")}
+        nemOnly={nemOnly}
+        onToggleNemOnly={() => setNemOnly(!nemOnly)}
+        parcelCounts={parcelCounts}
       />
 
       {/* Details Panel */}
