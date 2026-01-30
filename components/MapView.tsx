@@ -257,7 +257,58 @@ export default function MapView({
         interactiveLayerIds={["parcels-fill"]}
         cursor={hoveredFeature ? "pointer" : "grab"}
       >
-        {/* Electoral Divisions Layers - Render first so parcels appear on top */}
+        {/* Boundary Layer */}
+        <Source id="boundary" type="geojson" data={manchesterNorthEasternBoundary}>
+          <Layer
+            id="boundary-outline"
+            type="line"
+            paint={{
+              "line-color": "#3B82F6",
+              "line-width": 3,
+              "line-opacity": visibleLayers.boundary ? 1 : 0,
+            }}
+          />
+        </Source>
+
+        {/* Parcels Layer - Rendered first (underneath divisions) */}
+        {parcelsWithIds && (
+          <Source id="parcels" type="geojson" data={parcelsWithIds}>
+            <Layer
+              id="parcels-fill"
+              type="fill"
+              paint={{
+                "fill-color": [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  "rgba(255, 255, 255, 0.3)",
+                  "rgba(255, 255, 255, 0.1)",
+                ],
+                "fill-opacity": visibleLayers.parcels ? 1 : 0,
+              }}
+            />
+            <Layer
+              id="parcels-outline"
+              type="line"
+              paint={{
+                "line-color": [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  "#ffffff",
+                  "rgba(255, 255, 255, 0.8)",
+                ],
+                "line-width": [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  2,
+                  1,
+                ],
+                "line-opacity": visibleLayers.parcels ? 1 : 0,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Electoral Divisions Layers - Rendered on top as color overlay */}
         {divisionsData && visibleLayers.divisions && (
           <>
             {(Object.keys(divisionsData) as DivisionName[]).map((division) => (
@@ -272,71 +323,20 @@ export default function MapView({
                   type="fill"
                   paint={{
                     "fill-color": ELECTORAL_DIVISION_COLORS[division],
-                    "fill-opacity": 0.35,
+                    "fill-opacity": 0.25,
                   }}
                 />
                 <Layer
                   id={`division-outline-${division}`}
                   type="line"
                   paint={{
-                    "line-color": "#757575",
-                    "line-width": 1,
+                    "line-color": "#555555",
+                    "line-width": 1.5,
                   }}
                 />
               </Source>
             ))}
           </>
-        )}
-
-        {/* Boundary Layer */}
-        <Source id="boundary" type="geojson" data={manchesterNorthEasternBoundary}>
-          <Layer
-            id="boundary-outline"
-            type="line"
-            paint={{
-              "line-color": "#3B82F6",
-              "line-width": 3,
-              "line-opacity": visibleLayers.boundary ? 1 : 0,
-            }}
-          />
-        </Source>
-
-        {/* Parcels Layer */}
-        {parcelsWithIds && (
-          <Source id="parcels" type="geojson" data={parcelsWithIds}>
-            <Layer
-              id="parcels-fill"
-              type="fill"
-              paint={{
-                "fill-color": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  "rgba(45, 212, 191, 0.6)",
-                  "rgba(20, 184, 166, 0.4)",
-                ],
-                "fill-opacity": visibleLayers.parcels ? 1 : 0,
-              }}
-            />
-            <Layer
-              id="parcels-outline"
-              type="line"
-              paint={{
-                "line-color": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  "#ffffff",
-                  "rgba(255, 255, 255, 0.6)",
-                ],
-                "line-width": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  2,
-                  1,
-                ],
-                "line-opacity": visibleLayers.parcels ? 1 : 0,
-              }}
-            />
-          </Source>
         )}
 
         {/* Addresses Layer */}

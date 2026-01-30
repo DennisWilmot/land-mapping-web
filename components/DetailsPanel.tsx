@@ -92,33 +92,7 @@ export default function DetailsPanel({
             </dl>
           </div>
 
-          {/* Linked Address Data */}
-          {linkedAddress ? (
-            <div className="mb-6">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                Linked Address Record
-              </h4>
-              <dl className="glass-panel p-3 rounded-lg border border-teal-500/30">
-                <PropertyRow label="Land Valuation" value={linkedAddress.landValuation} />
-                <PropertyRow label="Title Reference" value={linkedAddress.titleReference} />
-                <PropertyRow label="Street Address" value={linkedAddress.streetAddress} />
-                <PropertyRow label="Scheme Address" value={linkedAddress.schemeAddress} />
-                <PropertyRow label="Full Address" value={linkedAddress.fullAddress} />
-                <PropertyRow label="Location" value={linkedAddress.location} />
-              </dl>
-            </div>
-          ) : parcel.LV_NUMBER ? (
-            <div className="mb-6">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                Linked Address Record
-              </h4>
-              <div className="glass-panel p-3 rounded-lg text-sm text-slate-400 italic">
-                No matching address record found for LV: {parcel.LV_NUMBER}
-              </div>
-            </div>
-          ) : null}
-
-          {/* Owner Information */}
+          {/* Owner Information - At Top */}
           {owner ? (
             <div className="mb-6">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
@@ -164,6 +138,32 @@ export default function DetailsPanel({
               </div>
             </div>
           )}
+
+          {/* Linked Address Data - Below Owner */}
+          {linkedAddress ? (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                Linked Address Record
+              </h4>
+              <dl className="glass-panel p-3 rounded-lg border border-teal-500/30">
+                <PropertyRow label="Land Valuation" value={linkedAddress.landValuation} />
+                <PropertyRow label="Title Reference" value={linkedAddress.titleReference} />
+                <PropertyRow label="Street Address" value={linkedAddress.streetAddress} />
+                <PropertyRow label="Scheme Address" value={linkedAddress.schemeAddress} />
+                <PropertyRow label="Full Address" value={linkedAddress.fullAddress} />
+                <PropertyRow label="Location" value={linkedAddress.location} />
+              </dl>
+            </div>
+          ) : parcel.LV_NUMBER ? (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                Linked Address Record
+              </h4>
+              <div className="glass-panel p-3 rounded-lg text-sm text-slate-400 italic">
+                No matching address record found for LV: {parcel.LV_NUMBER}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}

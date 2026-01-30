@@ -44,11 +44,16 @@ export function linkParcelToAddress(
 export function formatParcelSize(sqmt: number): string {
   if (!sqmt || isNaN(sqmt)) return "N/A";
   
-  if (sqmt >= 10000) {
-    const hectares = sqmt / 10000;
-    return `${hectares.toFixed(2)} ha`;
+  // Convert to acres (1 acre = 4046.86 m²)
+  const acres = sqmt / 4046.86;
+  
+  if (acres >= 1) {
+    return `${acres.toFixed(2)} acres`;
+  } else if (acres >= 0.1) {
+    return `${acres.toFixed(3)} acres`;
   }
   
+  // For very small parcels, show in m²
   return `${sqmt.toLocaleString()} m²`;
 }
 
