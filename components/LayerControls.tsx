@@ -13,7 +13,9 @@ interface LayerControlsProps {
   onToggleMapStyle: () => void;
   nemOnly: boolean;
   onToggleNemOnly: () => void;
-  parcelCounts?: { total: number; nem: number };
+  ownersOnly: boolean;
+  onToggleOwnersOnly: () => void;
+  parcelCounts?: { total: number; nem: number; withOwners: number; displayed: number };
 }
 
 function Toggle({
@@ -56,6 +58,8 @@ export default function LayerControls({
   onToggleMapStyle,
   nemOnly,
   onToggleNemOnly,
+  ownersOnly,
+  onToggleOwnersOnly,
   parcelCounts,
 }: LayerControlsProps) {
   return (
@@ -86,22 +90,29 @@ export default function LayerControls({
       </div>
 
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Constituencies
+        Filters
       </h3>
       
       <div className="space-y-2 border-b border-slate-700 pb-3 mb-3">
         <Toggle
           active={nemOnly}
           onClick={onToggleNemOnly}
-          label="NEM"
+          label="NEM Only"
           color="#8B5CF6"
+        />
+        <Toggle
+          active={ownersOnly}
+          onClick={onToggleOwnersOnly}
+          label="Known Owners"
+          color="#10B981"
         />
         {parcelCounts && (
           <div className="text-xs text-slate-500 pl-5">
-            {nemOnly ? (
-              <span>{parcelCounts.nem.toLocaleString()} parcels in NEM</span>
-            ) : (
-              <span>{parcelCounts.total.toLocaleString()} total parcels</span>
+            <span>{parcelCounts.displayed.toLocaleString()} parcels shown</span>
+            {ownersOnly && (
+              <span className="block text-emerald-400/70">
+                {parcelCounts.withOwners.toLocaleString()} with owner data
+              </span>
             )}
           </div>
         )}

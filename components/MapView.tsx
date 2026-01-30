@@ -18,6 +18,7 @@ import { formatParcelSize } from "@/lib/data/parcels";
 import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
 import type { Address } from "@/lib/data/addresses";
+import type { Owner } from "@/lib/data/owners";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -27,6 +28,7 @@ interface MapViewProps {
   parcelsData: FeatureCollection<Polygon, ParcelProperties> | null;
   addressesData: FeatureCollection<Point> | null;
   addressLookup: Map<string, Address>;
+  ownerLookup: Map<string, Owner>;
 }
 
 interface HoveredFeature {
@@ -39,6 +41,7 @@ export default function MapView({
   parcelsData,
   addressesData,
   addressLookup,
+  ownerLookup,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
   
@@ -53,6 +56,7 @@ export default function MapView({
   const [selectedParcel, setSelectedParcel] = useState<ParcelProperties | null>(null);
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const [nemOnly, setNemOnly] = useState(true);
+  const [ownersOnly, setOwnersOnly] = useState(false);
 
   const mapStyleUrl = useMemo(() => {
     return mapStyle === "satellite"
@@ -148,30 +152,44 @@ export default function MapView({
     return feature as Feature<Polygon>;
   }, []);
 
-  // Filter parcels to NEM only and add feature IDs
+  // Filter parcels based on NEM and owner filters, and add feature IDs
   const { parcelsWithIds, parcelCounts } = useMemo(() => {
-    if (!parcelsData) return { parcelsWithIds: null, parcelCounts: { total: 0, nem: 0 } };
+    if (!parcelsData) return { 
+      parcelsWithIds: null, 
+      parcelCounts: { total: 0, nem: 0, withOwners: 0, displayed: 0 } 
+    };
     
-    // First, calculate which parcels are in NEM (do this once)
-    const parcelsWithNemFlag = parcelsData.features.map((feature, index) => {
+    // Calculate flags for each parcel (do this once)
+    const parcelsWithFlags = parcelsData.features.map((feature, index) => {
       const center = centroid(feature);
       const isInNem = booleanPointInPolygon(center, boundaryPolygon);
+      const lvNumber = feature.properties?.LV_NUMBER;
+      const hasOwner = lvNumber ? ownerLookup.has(lvNumber) : false;
+      
       return {
         ...feature,
         id: feature.properties?.OBJECTID || index,
         properties: {
           ...feature.properties,
           _isInNem: isInNem,
+          _hasOwner: hasOwner,
         },
       };
     });
 
-    const nemCount = parcelsWithNemFlag.filter(f => f.properties._isInNem).length;
+    const nemCount = parcelsWithFlags.filter(f => f.properties._isInNem).length;
+    const withOwnersCount = parcelsWithFlags.filter(f => f.properties._hasOwner).length;
     
-    // Filter based on nemOnly toggle
-    const filteredFeatures = nemOnly 
-      ? parcelsWithNemFlag.filter(f => f.properties._isInNem)
-      : parcelsWithNemFlag;
+    // Apply filters
+    let filteredFeatures = parcelsWithFlags;
+    
+    if (nemOnly) {
+      filteredFeatures = filteredFeatures.filter(f => f.properties._isInNem);
+    }
+    
+    if (ownersOnly) {
+      filteredFeatures = filteredFeatures.filter(f => f.properties._hasOwner);
+    }
 
     return {
       parcelsWithIds: {
@@ -181,9 +199,11 @@ export default function MapView({
       parcelCounts: {
         total: parcelsData.features.length,
         nem: nemCount,
+        withOwners: withOwnersCount,
+        displayed: filteredFeatures.length,
       },
     };
-  }, [parcelsData, nemOnly, boundaryPolygon]);
+  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -317,6 +337,8 @@ export default function MapView({
         onToggleMapStyle={() => setMapStyle(mapStyle === "satellite" ? "streets" : "satellite")}
         nemOnly={nemOnly}
         onToggleNemOnly={() => setNemOnly(!nemOnly)}
+        ownersOnly={ownersOnly}
+        onToggleOwnersOnly={() => setOwnersOnly(!ownersOnly)}
         parcelCounts={parcelCounts}
       />
 
@@ -324,6 +346,7 @@ export default function MapView({
       <DetailsPanel
         parcel={selectedParcel}
         linkedAddress={selectedParcel?.LV_NUMBER ? addressLookup.get(selectedParcel.LV_NUMBER) || null : null}
+        owner={selectedParcel?.LV_NUMBER ? ownerLookup.get(selectedParcel.LV_NUMBER) || null : null}
         onClose={handleClosePanel}
       />
     </div>

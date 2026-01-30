@@ -10,6 +10,11 @@ import {
   addressesToGeoJSON,
   type Address,
 } from "@/lib/data/addresses";
+import {
+  loadOwners,
+  createOwnerLookup,
+  type Owner,
+} from "@/lib/data/owners";
 import { loadParcels, type ParcelProperties } from "@/lib/data/parcels";
 
 // Dynamically import MapView to avoid SSR issues with Mapbox
@@ -29,6 +34,7 @@ export default function Home() {
   const [parcelsData, setParcelsData] = useState<FeatureCollection<Polygon, ParcelProperties> | null>(null);
   const [addressesData, setAddressesData] = useState<FeatureCollection<Point, GeoJsonProperties> | null>(null);
   const [addressLookup, setAddressLookup] = useState<Map<string, Address>>(new Map());
+  const [ownerLookup, setOwnerLookup] = useState<Map<string, Owner>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,15 +44,17 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        // Load parcels and addresses in parallel
-        const [parcels, addresses] = await Promise.all([
+        // Load parcels, addresses, and owners in parallel
+        const [parcels, addresses, owners] = await Promise.all([
           loadParcels(),
           loadAddresses(),
+          loadOwners(),
         ]);
 
         setParcelsData(parcels);
         setAddressesData(addressesToGeoJSON(addresses));
         setAddressLookup(createAddressLookup(addresses));
+        setOwnerLookup(createOwnerLookup(owners));
       } catch (err) {
         console.error("Error loading data:", err);
         setError(err instanceof Error ? err.message : "Failed to load map data");
@@ -96,6 +104,7 @@ export default function Home() {
         parcelsData={parcelsData}
         addressesData={addressesData}
         addressLookup={addressLookup}
+        ownerLookup={ownerLookup}
       />
       
       {/* Loading overlay */}

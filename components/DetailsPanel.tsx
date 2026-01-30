@@ -2,11 +2,13 @@
 
 import type { ParcelProperties } from "@/lib/data/parcels";
 import type { Address } from "@/lib/data/addresses";
+import type { Owner } from "@/lib/data/owners";
 import { formatParcelSize } from "@/lib/data/parcels";
 
 interface DetailsPanelProps {
   parcel: ParcelProperties | null;
   linkedAddress: Address | null;
+  owner: Owner | null;
   onClose: () => void;
 }
 
@@ -23,6 +25,7 @@ function PropertyRow({ label, value }: { label: string; value: string | number |
 export default function DetailsPanel({
   parcel,
   linkedAddress,
+  owner,
   onClose,
 }: DetailsPanelProps) {
   if (!parcel) return null;
@@ -115,30 +118,52 @@ export default function DetailsPanel({
             </div>
           ) : null}
 
-          {/* Owner Data Placeholder */}
-          <div className="mb-6">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-              Owner Information
-            </h4>
-            <div className="glass-panel p-4 rounded-lg border border-dashed border-slate-600 text-center">
-              <div className="text-slate-500 text-sm">
-                <svg
-                  className="w-8 h-8 mx-auto mb-2 opacity-50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-                Owner data coming soon
+          {/* Owner Information */}
+          {owner ? (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                Owner Information
+              </h4>
+              <dl className="glass-panel p-3 rounded-lg border border-emerald-500/30">
+                <PropertyRow label="Owner Name" value={owner.ownerName} />
+                <PropertyRow label="Land Value" value={owner.landValue} />
+                <PropertyRow label="Valuation Number" value={owner.valuationNumber} />
+              </dl>
+            </div>
+          ) : parcel.LV_NUMBER ? (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                Owner Information
+              </h4>
+              <div className="glass-panel p-3 rounded-lg text-sm text-slate-400 italic">
+                No owner record found for LV: {parcel.LV_NUMBER}
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                Owner Information
+              </h4>
+              <div className="glass-panel p-4 rounded-lg border border-dashed border-slate-600 text-center">
+                <div className="text-slate-500 text-sm">
+                  <svg
+                    className="w-8 h-8 mx-auto mb-2 opacity-50"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  No LV number available
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
