@@ -6,6 +6,7 @@ import Map, {
   Layer,
   MapRef,
   MapLayerMouseEvent,
+  Marker,
 } from "react-map-gl";
 import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature, GeoJsonProperties } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -437,40 +438,19 @@ export default function MapView({
           </Source>
         )}
 
-        {/* Division Labels - Rendered LAST to appear on top of everything */}
-        {divisionsData && visibleLayers.divisions && (
-          <Source
-            id="division-labels"
-            type="geojson"
-            data={{
-              type: 'FeatureCollection',
-              features: [
-                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.52, 18.22] }, properties: { name: 'CRAIGHEAD' } },
-                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.48, 18.19] }, properties: { name: 'CHRISTIANA' } },
-                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.50, 18.14] }, properties: { name: 'WALDERSTON' } },
-              ],
-            }}
-          >
-            <Layer
-              id="division-labels-text"
-              type="symbol"
-              layout={{
-                "text-field": ["get", "name"],
-                "text-size": 18,
-                "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
-                "text-transform": "uppercase",
-                "text-letter-spacing": 0.15,
-                "text-allow-overlap": true,
-                "text-ignore-placement": true,
-                "symbol-sort-key": 999,
-              }}
-              paint={{
-                "text-color": "#ffffff",
-                "text-halo-color": "rgba(0, 0, 0, 0.9)",
-                "text-halo-width": 2.5,
-              }}
-            />
-          </Source>
+        {/* Division Labels - Rendered as HTML Markers to appear on top of everything */}
+        {visibleLayers.divisions && (
+          <>
+            <Marker longitude={-77.52} latitude={18.22} anchor="center">
+              <div className="division-label">CRAIGHEAD</div>
+            </Marker>
+            <Marker longitude={-77.48} latitude={18.19} anchor="center">
+              <div className="division-label">CHRISTIANA</div>
+            </Marker>
+            <Marker longitude={-77.50} latitude={18.14} anchor="center">
+              <div className="division-label">WALDERSTON</div>
+            </Marker>
+          </>
         )}
       </Map>
 
