@@ -7,7 +7,7 @@ import Map, {
   MapRef,
   MapLayerMouseEvent,
 } from "react-map-gl";
-import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature } from "geojson";
+import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature, GeoJsonProperties } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import centroid from "@turf/centroid";
@@ -66,11 +66,13 @@ export default function MapView({
   const [nemOnly, setNemOnly] = useState(true);
   const [ownersOnly, setOwnersOnly] = useState(false);
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
+  const [allDivisionsData, setAllDivisionsData] = useState<FeatureCollection<Polygon | MultiPolygon, DivisionProperties> | null>(null);
 
   // Load electoral divisions data
   useEffect(() => {
     loadElectoralDivisions()
       .then(data => {
+        setAllDivisionsData(data);
         setDivisionsData(groupByDivision(data));
       })
       .catch(err => console.error('Failed to load electoral divisions:', err));
@@ -170,7 +172,19 @@ export default function MapView({
     return feature as Feature<Polygon>;
   }, []);
 
-  // Filter parcels based on NEM and owner filters, and add feature IDs
+  // Helper to find which division a point is in
+  const findDivisionForPoint = useCallback((point: Feature<Point>) => {
+    if (!allDivisionsData) return null;
+    
+    for (const divisionFeature of allDivisionsData.features) {
+      if (booleanPointInPolygon(point, divisionFeature as Feature<Polygon>)) {
+        return divisionFeature.properties.ELECTORAL_DIVISION;
+      }
+    }
+    return null;
+  }, [allDivisionsData]);
+
+  // Filter parcels based on NEM and owner filters, and add feature IDs + division
   const { parcelsWithIds, parcelCounts } = useMemo(() => {
     if (!parcelsData) return { 
       parcelsWithIds: null, 
@@ -183,6 +197,7 @@ export default function MapView({
       const isInNem = booleanPointInPolygon(center, boundaryPolygon);
       const lvNumber = feature.properties?.LV_NUMBER;
       const hasOwner = lvNumber ? ownerLookup.has(lvNumber) : false;
+      const division = findDivisionForPoint(center);
       
       return {
         ...feature,
@@ -191,6 +206,7 @@ export default function MapView({
           ...feature.properties,
           _isInNem: isInNem,
           _hasOwner: hasOwner,
+          _division: division,
         },
       };
     });
@@ -221,7 +237,7 @@ export default function MapView({
         displayed: filteredFeatures.length,
       },
     };
-  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup]);
+  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -270,7 +286,7 @@ export default function MapView({
           />
         </Source>
 
-        {/* Parcels Layer - Rendered first (underneath divisions) */}
+        {/* Parcels Layer - Colored by division */}
         {parcelsWithIds && (
           <Source id="parcels" type="geojson" data={parcelsWithIds}>
             <Layer
@@ -280,10 +296,17 @@ export default function MapView({
                 "fill-color": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  "rgba(255, 255, 255, 0.3)",
-                  "rgba(255, 255, 255, 0.1)",
+                  "rgba(255, 255, 255, 0.4)",
+                  [
+                    "match",
+                    ["get", "_division"],
+                    "CRAIGHEAD", ELECTORAL_DIVISION_COLORS.CRAIGHEAD,
+                    "CHRISTIANA", ELECTORAL_DIVISION_COLORS.CHRISTIANA,
+                    "WALDERSTON", ELECTORAL_DIVISION_COLORS.WALDERSTON,
+                    "rgba(255, 255, 255, 0.2)" // fallback
+                  ],
                 ],
-                "fill-opacity": visibleLayers.parcels ? 1 : 0,
+                "fill-opacity": visibleLayers.parcels ? 0.5 : 0,
               }}
             />
             <Layer
@@ -294,12 +317,19 @@ export default function MapView({
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
                   "#ffffff",
-                  "rgba(255, 255, 255, 0.8)",
+                  [
+                    "match",
+                    ["get", "_division"],
+                    "CRAIGHEAD", ELECTORAL_DIVISION_COLORS.CRAIGHEAD,
+                    "CHRISTIANA", ELECTORAL_DIVISION_COLORS.CHRISTIANA,
+                    "WALDERSTON", ELECTORAL_DIVISION_COLORS.WALDERSTON,
+                    "#888888" // fallback
+                  ],
                 ],
                 "line-width": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  2,
+                  3,
                   1,
                 ],
                 "line-opacity": visibleLayers.parcels ? 1 : 0,
@@ -308,7 +338,7 @@ export default function MapView({
           </Source>
         )}
 
-        {/* Electoral Divisions Layers - Rendered on top as color overlay */}
+        {/* Electoral Divisions Outlines Only - Show division boundaries */}
         {divisionsData && visibleLayers.divisions && (
           <>
             {(Object.keys(divisionsData) as DivisionName[]).map((division) => (
@@ -319,19 +349,12 @@ export default function MapView({
                 data={divisionsData[division]}
               >
                 <Layer
-                  id={`division-fill-${division}`}
-                  type="fill"
-                  paint={{
-                    "fill-color": ELECTORAL_DIVISION_COLORS[division],
-                    "fill-opacity": 0.25,
-                  }}
-                />
-                <Layer
                   id={`division-outline-${division}`}
                   type="line"
                   paint={{
-                    "line-color": "#555555",
-                    "line-width": 1.5,
+                    "line-color": ELECTORAL_DIVISION_COLORS[division],
+                    "line-width": 2.5,
+                    "line-opacity": 0.8,
                   }}
                 />
               </Source>
