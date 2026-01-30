@@ -30,7 +30,6 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
-# Large data files - download separately or use external hosting
-# The GeoJSON is too large for GitHub (83MB)
-# Host it on S3, Cloudflare R2, or similar and fetch at runtime
-public/data/*.geojson
+# Large data files note:
+# manchester_parcels.geojson is 83MB - within GitHub's 100MB limit but large
+# Consider using Git LFS or external hosting for production
