@@ -75,24 +75,7 @@ export default function DetailsPanel({
             )}
           </div>
 
-          {/* Parcel Properties */}
-          <div className="mb-6">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-              Parcel Information
-            </h4>
-            <dl className="glass-panel p-3 rounded-lg">
-              <PropertyRow label="Parcel ID" value={parcel.PID} />
-              <PropertyRow label="LV Number" value={parcel.LV_NUMBER} />
-              <PropertyRow label="Volume/Folio" value={parcel.VOL_FOL} />
-              <PropertyRow label="Size" value={formatParcelSize(parcel.SIZE_SQMT)} />
-              <PropertyRow label="Street Address" value={parcel.STREET_ADD} />
-              <PropertyRow label="Scheme Address" value={parcel.SCHEME_ADD} />
-              <PropertyRow label="Full Address" value={parcel.FULLADDRES} />
-              <PropertyRow label="Parish" value={parcel.PARISH} />
-            </dl>
-          </div>
-
-          {/* Owner Information - At Top */}
+          {/* Owner Information - First Section */}
           {owner ? (
             <div className="mb-6">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
@@ -139,7 +122,24 @@ export default function DetailsPanel({
             </div>
           )}
 
-          {/* Linked Address Data - Below Owner */}
+          {/* Parcel Properties */}
+          <div className="mb-6">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+              Parcel Information
+            </h4>
+            <dl className="glass-panel p-3 rounded-lg">
+              <PropertyRow label="Parcel ID" value={parcel.PID} />
+              <PropertyRow label="LV Number" value={parcel.LV_NUMBER} />
+              <PropertyRow label="Volume/Folio" value={parcel.VOL_FOL} />
+              <PropertyRow label="Size" value={formatParcelSize(parcel.SIZE_SQMT)} />
+              <PropertyRow label="Street Address" value={parcel.STREET_ADD} />
+              <PropertyRow label="Scheme Address" value={parcel.SCHEME_ADD} />
+              <PropertyRow label="Full Address" value={parcel.FULLADDRES} />
+              <PropertyRow label="Parish" value={parcel.PARISH} />
+            </dl>
+          </div>
+
+          {/* Linked Address Data */}
           {linkedAddress ? (
             <div className="mb-6">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
