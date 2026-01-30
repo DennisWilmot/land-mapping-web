@@ -31,27 +31,89 @@ interface LayerControlsProps {
   onSizeRangeChange: (range: SizeRange) => void;
 }
 
+// Icon components for legend
+function ParcelIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" style={{ opacity }}>
+      <polygon
+        points="2,12 1,5 4,1 12,2 15,7 13,12 6,13"
+        fill={color}
+        fillOpacity={0.6}
+        stroke={color}
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function BoundaryIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" style={{ opacity }}>
+      <path
+        d="M2,10 Q4,2 8,6 T14,4"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PointIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" style={{ opacity }}>
+      <circle cx="7" cy="7" r="5" fill={color} stroke="#fff" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function DotIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <div
+      className="w-3 h-3 rounded-full"
+      style={{ backgroundColor: color, opacity }}
+    />
+  );
+}
+
+type IconType = "parcel" | "boundary" | "point" | "dot";
+
 function Toggle({
   active,
   onClick,
   label,
   color,
+  icon = "dot",
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   color: string;
+  icon?: IconType;
 }) {
+  const opacity = active ? 1 : 0.3;
+  
+  const renderIcon = () => {
+    switch (icon) {
+      case "parcel":
+        return <ParcelIcon color={color} opacity={opacity} />;
+      case "boundary":
+        return <BoundaryIcon color={color} opacity={opacity} />;
+      case "point":
+        return <PointIcon color={color} opacity={opacity} />;
+      default:
+        return <DotIcon color={color} opacity={opacity} />;
+    }
+  };
+
   return (
     <button
       onClick={onClick}
       className="flex items-center justify-between w-full py-2 group"
     >
       <div className="flex items-center gap-2">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: color, opacity: active ? 1 : 0.3 }}
-        />
+        {renderIcon()}
         <span className={`text-sm ${active ? "text-white" : "text-slate-400"}`}>
           {label}
         </span>
@@ -219,12 +281,14 @@ export default function LayerControls({
           onClick={() => onToggleLayer("boundary")}
           label="Boundary"
           color="#3B82F6"
+          icon="boundary"
         />
         <Toggle
           active={visibleLayers.divisions}
           onClick={() => onToggleLayer("divisions")}
           label="Division Borders"
           color="#A5DAF3"
+          icon="boundary"
         />
         <div className="pl-5 space-y-1">
           <Toggle
@@ -232,18 +296,21 @@ export default function LayerControls({
             onClick={() => onToggleDivision("CRAIGHEAD")}
             label="Craighead"
             color={ELECTORAL_DIVISION_COLORS.CRAIGHEAD}
+            icon="parcel"
           />
           <Toggle
             active={visibleDivisions.CHRISTIANA}
             onClick={() => onToggleDivision("CHRISTIANA")}
             label="Christiana"
             color={ELECTORAL_DIVISION_COLORS.CHRISTIANA}
+            icon="parcel"
           />
           <Toggle
             active={visibleDivisions.WALDERSTON}
             onClick={() => onToggleDivision("WALDERSTON")}
             label="Walderston"
             color={ELECTORAL_DIVISION_COLORS.WALDERSTON}
+            icon="parcel"
           />
         </div>
         <Toggle
@@ -251,12 +318,14 @@ export default function LayerControls({
           onClick={() => onToggleLayer("parcels")}
           label="Parcels"
           color="#14B8A6"
+          icon="parcel"
         />
         <Toggle
           active={visibleLayers.addresses}
           onClick={() => onToggleLayer("addresses")}
           label="Addresses"
           color="#F59E0B"
+          icon="point"
         />
       </div>
 
