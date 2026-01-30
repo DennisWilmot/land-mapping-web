@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MapStyle } from "./MapView";
 import type { DivisionName } from "@/lib/geo/electoral-divisions";
 import { ELECTORAL_DIVISION_COLORS } from "@/lib/geo/electoral-divisions";
@@ -185,14 +185,45 @@ function SizeRangeSlider({
   const boundsMinAcres = 0;
   const boundsMaxAcres = Math.round(sqmtToAcres(bounds.max));
 
+  // Local state for text inputs to allow typing
+  const [minInput, setMinInput] = useState(minAcres.toString());
+  const [maxInput, setMaxInput] = useState(maxAcres.toString());
+
+  // Sync local state when external values change (e.g., from slider)
+  useEffect(() => {
+    setMinInput(minAcres.toString());
+  }, [minAcres]);
+
+  useEffect(() => {
+    setMaxInput(maxAcres.toString());
+  }, [maxAcres]);
+
   const handleMinAcresChange = (newMinAcres: number) => {
-    const clamped = Math.max(boundsMinAcres, Math.min(newMinAcres, maxAcres - 1));
+    const clamped = Math.max(boundsMinAcres, Math.min(newMinAcres, maxAcres));
     onChange({ min: acresToSqmt(clamped), max: value.max });
   };
 
   const handleMaxAcresChange = (newMaxAcres: number) => {
-    const clamped = Math.min(boundsMaxAcres, Math.max(newMaxAcres, minAcres + 1));
+    const clamped = Math.min(boundsMaxAcres, Math.max(newMaxAcres, minAcres));
     onChange({ min: value.min, max: acresToSqmt(clamped) });
+  };
+
+  const applyMinInput = () => {
+    const num = parseInt(minInput, 10);
+    if (!isNaN(num)) {
+      handleMinAcresChange(num);
+    } else {
+      setMinInput(minAcres.toString());
+    }
+  };
+
+  const applyMaxInput = () => {
+    const num = parseInt(maxInput, 10);
+    if (!isNaN(num)) {
+      handleMaxAcresChange(num);
+    } else {
+      setMaxInput(maxAcres.toString());
+    }
   };
 
   const minPercent = (minAcres / boundsMaxAcres) * 100;
@@ -258,12 +289,13 @@ function SizeRangeSlider({
         <div className="flex-1">
           <label className="text-xs text-slate-500 block mb-1">Min (acres)</label>
           <input
-            type="number"
-            step="1"
-            value={minAcres}
-            onChange={(e) => handleMinAcresChange(Number(e.target.value))}
-            min={boundsMinAcres}
-            max={boundsMaxAcres}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={minInput}
+            onChange={(e) => setMinInput(e.target.value)}
+            onBlur={applyMinInput}
+            onKeyDown={(e) => e.key === 'Enter' && applyMinInput()}
             className="w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
@@ -271,12 +303,13 @@ function SizeRangeSlider({
         <div className="flex-1">
           <label className="text-xs text-slate-500 block mb-1">Max (acres)</label>
           <input
-            type="number"
-            step="1"
-            value={maxAcres}
-            onChange={(e) => handleMaxAcresChange(Number(e.target.value))}
-            min={boundsMinAcres}
-            max={boundsMaxAcres}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={maxInput}
+            onChange={(e) => setMaxInput(e.target.value)}
+            onBlur={applyMaxInput}
+            onKeyDown={(e) => e.key === 'Enter' && applyMaxInput()}
             className="w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
