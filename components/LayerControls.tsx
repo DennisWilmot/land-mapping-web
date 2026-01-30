@@ -86,14 +86,14 @@ export default function LayerControls({
       </div>
 
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Filter
+        Constituencies
       </h3>
       
       <div className="space-y-2 border-b border-slate-700 pb-3 mb-3">
         <Toggle
           active={nemOnly}
           onClick={onToggleNemOnly}
-          label="NEM Only"
+          label="NEM"
           color="#8B5CF6"
         />
         {parcelCounts && (

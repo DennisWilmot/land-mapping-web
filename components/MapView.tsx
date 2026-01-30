@@ -52,7 +52,7 @@ export default function MapView({
   const [hoveredFeature, setHoveredFeature] = useState<HoveredFeature | null>(null);
   const [selectedParcel, setSelectedParcel] = useState<ParcelProperties | null>(null);
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
-  const [nemOnly, setNemOnly] = useState(false);
+  const [nemOnly, setNemOnly] = useState(true);
 
   const mapStyleUrl = useMemo(() => {
     return mapStyle === "satellite"
