@@ -128,12 +128,24 @@ function Toggle({
 
 function formatSizeDisplay(sqmt: number): string {
   const acres = sqmt / 4046.86;
-  if (acres >= 1) {
+  if (acres >= 10) {
+    return `${acres.toFixed(0)} ac`;
+  } else if (acres >= 1) {
     return `${acres.toFixed(1)} ac`;
-  } else if (sqmt >= 1000) {
-    return `${(sqmt / 1000).toFixed(1)}k m²`;
+  } else if (acres >= 0.01) {
+    return `${acres.toFixed(2)} ac`;
   }
-  return `${Math.round(sqmt)} m²`;
+  return `${acres.toFixed(3)} ac`;
+}
+
+const SQMT_PER_ACRE = 4046.86;
+
+function sqmtToAcres(sqmt: number): number {
+  return sqmt / SQMT_PER_ACRE;
+}
+
+function acresToSqmt(acres: number): number {
+  return acres * SQMT_PER_ACRE;
 }
 
 function SizeRangeSlider({
@@ -145,12 +157,28 @@ function SizeRangeSlider({
   bounds: SizeRange;
   onChange: (range: SizeRange) => void;
 }) {
+  // Convert to acres for display
+  const minAcres = sqmtToAcres(value.min);
+  const maxAcres = sqmtToAcres(value.max);
+  const boundsMinAcres = sqmtToAcres(bounds.min);
+  const boundsMaxAcres = sqmtToAcres(bounds.max);
+
   const handleMinChange = (newMin: number) => {
     onChange({ min: Math.min(newMin, value.max), max: value.max });
   };
 
   const handleMaxChange = (newMax: number) => {
     onChange({ min: value.min, max: Math.max(newMax, value.min) });
+  };
+
+  const handleMinAcresChange = (newMinAcres: number) => {
+    const newMinSqmt = acresToSqmt(newMinAcres);
+    onChange({ min: Math.min(newMinSqmt, value.max), max: value.max });
+  };
+
+  const handleMaxAcresChange = (newMaxAcres: number) => {
+    const newMaxSqmt = acresToSqmt(newMaxAcres);
+    onChange({ min: value.min, max: Math.max(newMaxSqmt, value.min) });
   };
 
   const minPercent = ((value.min - bounds.min) / (bounds.max - bounds.min)) * 100;
@@ -213,28 +241,30 @@ function SizeRangeSlider({
         />
       </div>
 
-      {/* Manual inputs */}
+      {/* Manual inputs in acres */}
       <div className="flex gap-2 items-center">
         <div className="flex-1">
-          <label className="text-xs text-slate-500 block mb-1">Min (m²)</label>
+          <label className="text-xs text-slate-500 block mb-1">Min (acres)</label>
           <input
             type="number"
-            value={value.min}
-            onChange={(e) => handleMinChange(Number(e.target.value))}
-            min={bounds.min}
-            max={bounds.max}
+            step="0.01"
+            value={minAcres.toFixed(2)}
+            onChange={(e) => handleMinAcresChange(Number(e.target.value))}
+            min={boundsMinAcres}
+            max={boundsMaxAcres}
             className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
         <span className="text-slate-500 mt-4">–</span>
         <div className="flex-1">
-          <label className="text-xs text-slate-500 block mb-1">Max (m²)</label>
+          <label className="text-xs text-slate-500 block mb-1">Max (acres)</label>
           <input
             type="number"
-            value={value.max === Infinity ? bounds.max : value.max}
-            onChange={(e) => handleMaxChange(Number(e.target.value))}
-            min={bounds.min}
-            max={bounds.max}
+            step="0.01"
+            value={maxAcres === Infinity ? boundsMaxAcres.toFixed(2) : maxAcres.toFixed(2)}
+            onChange={(e) => handleMaxAcresChange(Number(e.target.value))}
+            min={boundsMinAcres}
+            max={boundsMaxAcres}
             className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
