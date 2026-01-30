@@ -228,20 +228,28 @@ export default function MapView({
     return null;
   }, [divisionsData]);
 
-  // Filter parcels based on NEM and owner filters, and add feature IDs + division
-  const { parcelsWithIds, parcelCounts } = useMemo(() => {
-    if (!parcelsData) return { 
-      parcelsWithIds: null, 
-      parcelCounts: { total: 0, nem: 0, withOwners: 0, displayed: 0 } 
+  // STEP 1: Pre-process parcels ONCE when data loads (expensive geometric operations)
+  const { preprocessedParcels, nemCount, withOwnersCount } = useMemo(() => {
+    if (!parcelsData || !divisionsData) return { 
+      preprocessedParcels: null, 
+      nemCount: 0, 
+      withOwnersCount: 0 
     };
     
-    // Calculate flags for each parcel (do this once)
-    const parcelsWithFlags = parcelsData.features.map((feature, index) => {
+    console.time('Parcel preprocessing');
+    
+    let nemCount = 0;
+    let withOwnersCount = 0;
+    
+    const preprocessedParcels = parcelsData.features.map((feature, index) => {
       const center = centroid(feature);
       const isInNem = booleanPointInPolygon(center, boundaryPolygon);
       const lvNumber = feature.properties?.LV_NUMBER;
       const hasOwner = lvNumber ? ownerLookup.has(lvNumber) : false;
       const division = findDivisionForPoint(center);
+      
+      if (isInNem) nemCount++;
+      if (hasOwner) withOwnersCount++;
       
       return {
         ...feature,
@@ -254,12 +262,20 @@ export default function MapView({
         },
       };
     });
-
-    const nemCount = parcelsWithFlags.filter(f => f.properties._isInNem).length;
-    const withOwnersCount = parcelsWithFlags.filter(f => f.properties._hasOwner).length;
     
-    // Apply filters
-    let filteredFeatures = parcelsWithFlags;
+    console.timeEnd('Parcel preprocessing');
+    
+    return { preprocessedParcels, nemCount, withOwnersCount };
+  }, [parcelsData, divisionsData, boundaryPolygon, ownerLookup, findDivisionForPoint]);
+
+  // STEP 2: Apply filters (cheap operations - just property checks)
+  const { parcelsWithIds, parcelCounts } = useMemo(() => {
+    if (!preprocessedParcels) return { 
+      parcelsWithIds: null, 
+      parcelCounts: { total: 0, nem: 0, withOwners: 0, displayed: 0 } 
+    };
+    
+    let filteredFeatures = preprocessedParcels;
     
     if (nemOnly) {
       filteredFeatures = filteredFeatures.filter(f => f.properties._isInNem);
@@ -285,17 +301,17 @@ export default function MapView({
 
     return {
       parcelsWithIds: {
-        ...parcelsData,
+        type: 'FeatureCollection' as const,
         features: filteredFeatures,
       },
       parcelCounts: {
-        total: parcelsData.features.length,
+        total: preprocessedParcels.length,
         nem: nemCount,
         withOwners: withOwnersCount,
         displayed: filteredFeatures.length,
       },
     };
-  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint, visibleDivisions, sizeRange]);
+  }, [preprocessedParcels, nemCount, withOwnersCount, nemOnly, ownersOnly, visibleDivisions, sizeRange]);
 
   if (!MAPBOX_TOKEN) {
     return (
