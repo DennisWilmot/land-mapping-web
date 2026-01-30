@@ -16,7 +16,6 @@ import { manchesterNorthEasternBoundary, boundaryCenter, boundaryZoom } from "@/
 import { 
   loadElectoralDivisions, 
   groupByDivision,
-  createMergedDivisionBoundaries,
   ELECTORAL_DIVISION_COLORS,
   type DivisionProperties,
   type DivisionName 
@@ -72,14 +71,12 @@ export default function MapView({
     WALDERSTON: true,
   });
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
-  const [mergedBoundaries, setMergedBoundaries] = useState<Record<DivisionName, Feature<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
 
   // Load electoral divisions data
   useEffect(() => {
     loadElectoralDivisions()
       .then(data => {
         setDivisionsData(groupByDivision(data));
-        setMergedBoundaries(createMergedDivisionBoundaries(data));
       })
       .catch(err => console.error('Failed to load electoral divisions:', err));
   }, []);
@@ -178,19 +175,28 @@ export default function MapView({
     return feature as Feature<Polygon>;
   }, []);
 
-  // Helper to find which division a point is in using merged boundaries
+  // Helper to find which division a point is in by checking all community polygons
   const findDivisionForPoint = useCallback((point: Feature<Point>): DivisionName | null => {
-    if (!mergedBoundaries) return null;
+    if (!divisionsData) return null;
     
-    // Check against each merged division boundary
+    // Check against all community polygons in each division
     for (const division of ['CRAIGHEAD', 'CHRISTIANA', 'WALDERSTON'] as DivisionName[]) {
-      const boundary = mergedBoundaries[division];
-      if (boundary && booleanPointInPolygon(point, boundary as Feature<Polygon>)) {
-        return division;
+      const divisionPolygons = divisionsData[division];
+      if (!divisionPolygons) continue;
+      
+      for (const feature of divisionPolygons.features) {
+        try {
+          if (booleanPointInPolygon(point, feature as Feature<Polygon>)) {
+            return division;
+          }
+        } catch {
+          // Skip invalid polygons
+          continue;
+        }
       }
     }
     return null;
-  }, [mergedBoundaries]);
+  }, [divisionsData]);
 
   // Filter parcels based on NEM and owner filters, and add feature IDs + division
   const { parcelsWithIds, parcelCounts } = useMemo(() => {
