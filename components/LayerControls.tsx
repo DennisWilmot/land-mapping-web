@@ -1,8 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import type { MapStyle } from "./MapView";
 import type { DivisionName } from "@/lib/geo/electoral-divisions";
 import { ELECTORAL_DIVISION_COLORS } from "@/lib/geo/electoral-divisions";
+
+// Chevron icon for collapse/expand
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+    >
+      <path
+        d="M4 6L8 10L12 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 interface SizeRange {
   min: number;
@@ -299,133 +321,149 @@ export default function LayerControls({
   sizeBounds,
   onSizeRangeChange,
 }: LayerControlsProps) {
-  return (
-    <div className="absolute top-4 left-4 z-10 glass-panel p-4 min-w-[200px]">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Layers
-      </h3>
-      
-      <div className="space-y-1 border-b border-slate-700 pb-3 mb-3">
-        <Toggle
-          active={visibleLayers.boundary}
-          onClick={() => onToggleLayer("boundary")}
-          label="Boundary"
-          color="#3B82F6"
-          icon="boundary"
-        />
-        <Toggle
-          active={visibleLayers.divisions}
-          onClick={() => onToggleLayer("divisions")}
-          label="Division Borders"
-          color="#A5DAF3"
-          icon="boundary"
-        />
-        <div className="pl-5 space-y-1">
-          <Toggle
-            active={visibleDivisions.CRAIGHEAD}
-            onClick={() => onToggleDivision("CRAIGHEAD")}
-            label="Craighead"
-            color={ELECTORAL_DIVISION_COLORS.CRAIGHEAD}
-            icon="parcel"
-          />
-          <Toggle
-            active={visibleDivisions.CHRISTIANA}
-            onClick={() => onToggleDivision("CHRISTIANA")}
-            label="Christiana"
-            color={ELECTORAL_DIVISION_COLORS.CHRISTIANA}
-            icon="parcel"
-          />
-          <Toggle
-            active={visibleDivisions.WALDERSTON}
-            onClick={() => onToggleDivision("WALDERSTON")}
-            label="Walderston"
-            color={ELECTORAL_DIVISION_COLORS.WALDERSTON}
-            icon="parcel"
-          />
-        </div>
-        <Toggle
-          active={visibleLayers.parcels}
-          onClick={() => onToggleLayer("parcels")}
-          label="Parcels"
-          color="#14B8A6"
-          icon="parcel"
-        />
-        <Toggle
-          active={visibleLayers.addresses}
-          onClick={() => onToggleLayer("addresses")}
-          label="Addresses"
-          color="#F59E0B"
-          icon="point"
-        />
-      </div>
+  const [isExpanded, setIsExpanded] = useState(true);
 
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Filters
-      </h3>
-      
-      <div className="space-y-2 border-b border-slate-700 pb-3 mb-3">
-        <Toggle
-          active={nemOnly}
-          onClick={onToggleNemOnly}
-          label="NEM Only"
-          color="#8B5CF6"
-        />
-        <Toggle
-          active={ownersOnly}
-          onClick={onToggleOwnersOnly}
-          label="Known Owners"
-          color="#10B981"
-        />
-        {parcelCounts && (
-          <div className="text-xs text-slate-500 pl-5">
-            <span>{parcelCounts.displayed.toLocaleString()} parcels shown</span>
-            {ownersOnly && (
-              <span className="block text-emerald-400/70">
-                {parcelCounts.withOwners.toLocaleString()} with owner data
-              </span>
+  return (
+    <div className="absolute top-4 left-4 z-10 glass-panel min-w-[220px] max-w-[280px] flex flex-col max-h-[calc(100vh-120px)]">
+      {/* Header - always visible */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center justify-between w-full p-4 pb-2 hover:bg-white/5 transition-colors rounded-t-xl"
+      >
+        <h2 className="text-sm font-semibold text-white">Controls</h2>
+        <ChevronIcon expanded={isExpanded} />
+      </button>
+
+      {/* Collapsible content */}
+      {isExpanded && (
+        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Layers
+          </h3>
+          
+          <div className="space-y-1 border-b border-slate-700 pb-3 mb-3">
+            <Toggle
+              active={visibleLayers.boundary}
+              onClick={() => onToggleLayer("boundary")}
+              label="Boundary"
+              color="#3B82F6"
+              icon="boundary"
+            />
+            <Toggle
+              active={visibleLayers.divisions}
+              onClick={() => onToggleLayer("divisions")}
+              label="Division Borders"
+              color="#A5DAF3"
+              icon="boundary"
+            />
+            <div className="pl-5 space-y-1">
+              <Toggle
+                active={visibleDivisions.CRAIGHEAD}
+                onClick={() => onToggleDivision("CRAIGHEAD")}
+                label="Craighead"
+                color={ELECTORAL_DIVISION_COLORS.CRAIGHEAD}
+                icon="parcel"
+              />
+              <Toggle
+                active={visibleDivisions.CHRISTIANA}
+                onClick={() => onToggleDivision("CHRISTIANA")}
+                label="Christiana"
+                color={ELECTORAL_DIVISION_COLORS.CHRISTIANA}
+                icon="parcel"
+              />
+              <Toggle
+                active={visibleDivisions.WALDERSTON}
+                onClick={() => onToggleDivision("WALDERSTON")}
+                label="Walderston"
+                color={ELECTORAL_DIVISION_COLORS.WALDERSTON}
+                icon="parcel"
+              />
+            </div>
+            <Toggle
+              active={visibleLayers.parcels}
+              onClick={() => onToggleLayer("parcels")}
+              label="Parcels"
+              color="#14B8A6"
+              icon="parcel"
+            />
+            <Toggle
+              active={visibleLayers.addresses}
+              onClick={() => onToggleLayer("addresses")}
+              label="Addresses"
+              color="#F59E0B"
+              icon="point"
+            />
+          </div>
+
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Filters
+          </h3>
+          
+          <div className="space-y-2 border-b border-slate-700 pb-3 mb-3">
+            <Toggle
+              active={nemOnly}
+              onClick={onToggleNemOnly}
+              label="NEM Only"
+              color="#8B5CF6"
+            />
+            <Toggle
+              active={ownersOnly}
+              onClick={onToggleOwnersOnly}
+              label="Known Owners"
+              color="#10B981"
+            />
+            {parcelCounts && (
+              <div className="text-xs text-slate-500 pl-5">
+                <span>{parcelCounts.displayed.toLocaleString()} parcels shown</span>
+                {ownersOnly && (
+                  <span className="block text-emerald-400/70">
+                    {parcelCounts.withOwners.toLocaleString()} with owner data
+                  </span>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Parcel Size
-      </h3>
-      
-      <div className="border-b border-slate-700 pb-3 mb-3">
-        <SizeRangeSlider
-          value={sizeRange}
-          bounds={sizeBounds}
-          onChange={onSizeRangeChange}
-        />
-      </div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Parcel Size
+          </h3>
+          
+          <div className="border-b border-slate-700 pb-3 mb-3">
+            <SizeRangeSlider
+              value={sizeRange}
+              bounds={sizeBounds}
+              onChange={onSizeRangeChange}
+            />
+          </div>
 
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-        Map Style
-      </h3>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={onToggleMapStyle}
-          className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-            mapStyle === "satellite"
-              ? "bg-blue-600 text-white"
-              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-          }`}
-        >
-          Satellite
-        </button>
-        <button
-          onClick={onToggleMapStyle}
-          className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-            mapStyle === "streets"
-              ? "bg-blue-600 text-white"
-              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-          }`}
-        >
-          Streets
-        </button>
-      </div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Map Style
+          </h3>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={onToggleMapStyle}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                mapStyle === "satellite"
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              }`}
+            >
+              Satellite
+            </button>
+            <button
+              onClick={onToggleMapStyle}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                mapStyle === "streets"
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              }`}
+            >
+              Streets
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
