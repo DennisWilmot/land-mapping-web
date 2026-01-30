@@ -230,7 +230,7 @@ function SizeRangeSlider({
   const maxPercent = (maxAcres / boundsMaxAcres) * 100;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Display current range */}
       <div className="flex justify-between text-xs text-slate-300">
         <span>{minAcres.toLocaleString()} acres</span>
@@ -238,7 +238,7 @@ function SizeRangeSlider({
       </div>
 
       {/* Dual range slider */}
-      <div className="relative h-8">
+      <div className="relative h-8 my-2">
         {/* Track background */}
         <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-2 bg-slate-700 rounded-full" />
         
@@ -285,7 +285,7 @@ function SizeRangeSlider({
       </div>
 
       {/* Manual inputs in acres - whole numbers only */}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 items-center mt-4">
         <div className="flex-1">
           <label className="text-xs text-slate-500 block mb-1">Min (acres)</label>
           <input
@@ -442,11 +442,11 @@ export default function LayerControls({
             )}
           </div>
 
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 mt-1">
             Parcel Size
           </h3>
           
-          <div className="border-b border-slate-700 pb-3 mb-3">
+          <div className="border-b border-slate-700 pb-4 mb-3 pt-1">
             <SizeRangeSlider
               value={sizeRange}
               bounds={sizeBounds}
