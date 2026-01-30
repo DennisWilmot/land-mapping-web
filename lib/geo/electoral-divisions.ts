@@ -12,11 +12,12 @@ export const ELECTORAL_DIVISION_COLORS: Record<string, string> = {
 
 export type DivisionName = 'CRAIGHEAD' | 'CHRISTIANA' | 'WALDERSTON';
 
-export interface DivisionProperties extends GeoJsonProperties {
+export type DivisionProperties = {
   COMM_NAME_?: string;
   ELECTORAL_DIVISION: DivisionName;
   color: string;
-}
+  [key: string]: unknown;
+};
 
 // Community name keywords for each division
 const CRAIGHEAD_KEYWORDS = [
