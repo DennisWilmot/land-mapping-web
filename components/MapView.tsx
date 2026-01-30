@@ -1,18 +1,25 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, {
   Source,
   Layer,
   MapRef,
   MapLayerMouseEvent,
 } from "react-map-gl";
-import type { FeatureCollection, Polygon, Point, Feature } from "geojson";
+import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import centroid from "@turf/centroid";
 
 import { manchesterNorthEasternBoundary, boundaryCenter, boundaryZoom } from "@/lib/geo/boundary";
+import { 
+  loadElectoralDivisions, 
+  groupByDivision, 
+  ELECTORAL_DIVISION_COLORS,
+  type DivisionProperties,
+  type DivisionName 
+} from "@/lib/geo/electoral-divisions";
 import type { ParcelProperties } from "@/lib/data/parcels";
 import { formatParcelSize } from "@/lib/data/parcels";
 import LayerControls from "./LayerControls";
@@ -48,6 +55,7 @@ export default function MapView({
   const [mapStyle, setMapStyle] = useState<MapStyle>("satellite");
   const [visibleLayers, setVisibleLayers] = useState({
     boundary: true,
+    divisions: true,
     parcels: true,
     addresses: false,
   });
@@ -57,6 +65,16 @@ export default function MapView({
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const [nemOnly, setNemOnly] = useState(true);
   const [ownersOnly, setOwnersOnly] = useState(false);
+  const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
+
+  // Load electoral divisions data
+  useEffect(() => {
+    loadElectoralDivisions()
+      .then(data => {
+        setDivisionsData(groupByDivision(data));
+      })
+      .catch(err => console.error('Failed to load electoral divisions:', err));
+  }, []);
 
   const mapStyleUrl = useMemo(() => {
     return mapStyle === "satellite"
@@ -239,6 +257,37 @@ export default function MapView({
         interactiveLayerIds={["parcels-fill"]}
         cursor={hoveredFeature ? "pointer" : "grab"}
       >
+        {/* Electoral Divisions Layers - Render first so parcels appear on top */}
+        {divisionsData && visibleLayers.divisions && (
+          <>
+            {(Object.keys(divisionsData) as DivisionName[]).map((division) => (
+              <Source
+                key={`division-${division}`}
+                id={`division-${division}`}
+                type="geojson"
+                data={divisionsData[division]}
+              >
+                <Layer
+                  id={`division-fill-${division}`}
+                  type="fill"
+                  paint={{
+                    "fill-color": ELECTORAL_DIVISION_COLORS[division],
+                    "fill-opacity": 0.35,
+                  }}
+                />
+                <Layer
+                  id={`division-outline-${division}`}
+                  type="line"
+                  paint={{
+                    "line-color": "#757575",
+                    "line-width": 1,
+                  }}
+                />
+              </Source>
+            ))}
+          </>
+        )}
+
         {/* Boundary Layer */}
         <Source id="boundary" type="geojson" data={manchesterNorthEasternBoundary}>
           <Layer

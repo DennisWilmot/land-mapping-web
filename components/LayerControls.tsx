@@ -5,10 +5,11 @@ import type { MapStyle } from "./MapView";
 interface LayerControlsProps {
   visibleLayers: {
     boundary: boolean;
+    divisions: boolean;
     parcels: boolean;
     addresses: boolean;
   };
-  onToggleLayer: (layer: "boundary" | "parcels" | "addresses") => void;
+  onToggleLayer: (layer: "boundary" | "divisions" | "parcels" | "addresses") => void;
   mapStyle: MapStyle;
   onToggleMapStyle: () => void;
   nemOnly: boolean;
@@ -75,6 +76,28 @@ export default function LayerControls({
           label="Boundary"
           color="#3B82F6"
         />
+        <Toggle
+          active={visibleLayers.divisions}
+          onClick={() => onToggleLayer("divisions")}
+          label="Divisions"
+          color="#A5DAF3"
+        />
+        {visibleLayers.divisions && (
+          <div className="pl-5 space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#FFB6DB' }} />
+              <span className="text-slate-400">Craighead</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#F4DE7E' }} />
+              <span className="text-slate-400">Christiana</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#A5DAF3' }} />
+              <span className="text-slate-400">Walderston</span>
+            </div>
+          </div>
+        )}
         <Toggle
           active={visibleLayers.parcels}
           onClick={() => onToggleLayer("parcels")}
