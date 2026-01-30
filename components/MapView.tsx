@@ -65,6 +65,11 @@ export default function MapView({
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const [nemOnly, setNemOnly] = useState(true);
   const [ownersOnly, setOwnersOnly] = useState(false);
+  const [visibleDivisions, setVisibleDivisions] = useState<Record<DivisionName, boolean>>({
+    CRAIGHEAD: true,
+    CHRISTIANA: true,
+    WALDERSTON: true,
+  });
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
   const [allDivisionsData, setAllDivisionsData] = useState<FeatureCollection<Polygon | MultiPolygon, DivisionProperties> | null>(null);
 
@@ -225,6 +230,13 @@ export default function MapView({
       filteredFeatures = filteredFeatures.filter(f => f.properties._hasOwner);
     }
 
+    // Filter by visible divisions
+    filteredFeatures = filteredFeatures.filter(f => {
+      const division = f.properties._division as DivisionName | null;
+      if (!division) return true; // Show parcels with no division
+      return visibleDivisions[division];
+    });
+
     return {
       parcelsWithIds: {
         ...parcelsData,
@@ -237,7 +249,7 @@ export default function MapView({
         displayed: filteredFeatures.length,
       },
     };
-  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint]);
+  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint, visibleDivisions]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -411,6 +423,8 @@ export default function MapView({
         onToggleNemOnly={() => setNemOnly(!nemOnly)}
         ownersOnly={ownersOnly}
         onToggleOwnersOnly={() => setOwnersOnly(!ownersOnly)}
+        visibleDivisions={visibleDivisions}
+        onToggleDivision={(division: DivisionName) => setVisibleDivisions(prev => ({ ...prev, [division]: !prev[division] }))}
         parcelCounts={parcelCounts}
       />
 

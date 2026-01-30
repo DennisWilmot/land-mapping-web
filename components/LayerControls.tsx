@@ -1,6 +1,8 @@
 "use client";
 
 import type { MapStyle } from "./MapView";
+import type { DivisionName } from "@/lib/geo/electoral-divisions";
+import { ELECTORAL_DIVISION_COLORS } from "@/lib/geo/electoral-divisions";
 
 interface LayerControlsProps {
   visibleLayers: {
@@ -16,6 +18,8 @@ interface LayerControlsProps {
   onToggleNemOnly: () => void;
   ownersOnly: boolean;
   onToggleOwnersOnly: () => void;
+  visibleDivisions: Record<DivisionName, boolean>;
+  onToggleDivision: (division: DivisionName) => void;
   parcelCounts?: { total: number; nem: number; withOwners: number; displayed: number };
 }
 
@@ -61,6 +65,8 @@ export default function LayerControls({
   onToggleNemOnly,
   ownersOnly,
   onToggleOwnersOnly,
+  visibleDivisions,
+  onToggleDivision,
   parcelCounts,
 }: LayerControlsProps) {
   return (
@@ -79,25 +85,29 @@ export default function LayerControls({
         <Toggle
           active={visibleLayers.divisions}
           onClick={() => onToggleLayer("divisions")}
-          label="Divisions"
+          label="Division Borders"
           color="#A5DAF3"
         />
-        {visibleLayers.divisions && (
-          <div className="pl-5 space-y-1 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#FFB6DB' }} />
-              <span className="text-slate-400">Craighead</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#F4DE7E' }} />
-              <span className="text-slate-400">Christiana</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#A5DAF3' }} />
-              <span className="text-slate-400">Walderston</span>
-            </div>
-          </div>
-        )}
+        <div className="pl-5 space-y-1">
+          <Toggle
+            active={visibleDivisions.CRAIGHEAD}
+            onClick={() => onToggleDivision("CRAIGHEAD")}
+            label="Craighead"
+            color={ELECTORAL_DIVISION_COLORS.CRAIGHEAD}
+          />
+          <Toggle
+            active={visibleDivisions.CHRISTIANA}
+            onClick={() => onToggleDivision("CHRISTIANA")}
+            label="Christiana"
+            color={ELECTORAL_DIVISION_COLORS.CHRISTIANA}
+          />
+          <Toggle
+            active={visibleDivisions.WALDERSTON}
+            onClick={() => onToggleDivision("WALDERSTON")}
+            label="Walderston"
+            color={ELECTORAL_DIVISION_COLORS.WALDERSTON}
+          />
+        </div>
         <Toggle
           active={visibleLayers.parcels}
           onClick={() => onToggleLayer("parcels")}
