@@ -39,7 +39,7 @@ export default function DetailsPanel({
       />
       
       {/* Panel */}
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm z-30 glass-panel rounded-none md:rounded-l-xl overflow-hidden flex flex-col animate-slide-in">
+      <div className="absolute right-4 top-4 w-full max-w-sm z-30 glass-panel rounded-xl overflow-hidden flex flex-col animate-slide-in max-h-[calc(100vh-100px)]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           <h2 className="text-lg font-semibold text-white">Parcel Details</h2>
