@@ -383,6 +383,40 @@ export default function MapView({
           </>
         )}
 
+        {/* Division Labels */}
+        {divisionsData && visibleLayers.divisions && (
+          <Source
+            id="division-labels"
+            type="geojson"
+            data={{
+              type: 'FeatureCollection',
+              features: [
+                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.52, 18.22] }, properties: { name: 'CRAIGHEAD' } },
+                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.48, 18.19] }, properties: { name: 'CHRISTIANA' } },
+                { type: 'Feature', geometry: { type: 'Point', coordinates: [-77.50, 18.14] }, properties: { name: 'WALDERSTON' } },
+              ],
+            }}
+          >
+            <Layer
+              id="division-labels-text"
+              type="symbol"
+              layout={{
+                "text-field": ["get", "name"],
+                "text-size": 16,
+                "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+                "text-transform": "uppercase",
+                "text-letter-spacing": 0.1,
+                "text-allow-overlap": true,
+              }}
+              paint={{
+                "text-color": "#ffffff",
+                "text-halo-color": "rgba(0, 0, 0, 0.8)",
+                "text-halo-width": 2,
+              }}
+            />
+          </Source>
+        )}
+
         {/* Addresses Layer */}
         {addressesData && (
           <Source id="addresses" type="geojson" data={addressesData}>
