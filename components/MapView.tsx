@@ -71,6 +71,35 @@ export default function MapView({
     WALDERSTON: true,
   });
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
+  const [sizeRange, setSizeRange] = useState<{ min: number; max: number }>({ min: 0, max: Infinity });
+
+  // Compute size bounds from parcel data
+  const sizeBounds = useMemo(() => {
+    if (!parcelsData) return { min: 0, max: 100000 };
+    
+    let min = Infinity;
+    let max = 0;
+    
+    for (const feature of parcelsData.features) {
+      const size = feature.properties?.SIZE_SQMT;
+      if (size && !isNaN(size) && size > 0) {
+        if (size < min) min = size;
+        if (size > max) max = size;
+      }
+    }
+    
+    return { 
+      min: min === Infinity ? 0 : Math.floor(min), 
+      max: max === 0 ? 100000 : Math.ceil(max) 
+    };
+  }, [parcelsData]);
+
+  // Initialize size range when bounds are computed
+  useEffect(() => {
+    if (sizeBounds.min !== 0 || sizeBounds.max !== 100000) {
+      setSizeRange({ min: sizeBounds.min, max: sizeBounds.max });
+    }
+  }, [sizeBounds]);
 
   // Load electoral divisions data
   useEffect(() => {
@@ -239,6 +268,13 @@ export default function MapView({
       filteredFeatures = filteredFeatures.filter(f => f.properties._hasOwner);
     }
 
+    // Filter by size range
+    filteredFeatures = filteredFeatures.filter(f => {
+      const size = f.properties.SIZE_SQMT;
+      if (!size || isNaN(size)) return true; // Keep parcels with no size data
+      return size >= sizeRange.min && size <= sizeRange.max;
+    });
+
     // Filter by visible divisions
     filteredFeatures = filteredFeatures.filter(f => {
       const division = f.properties._division as DivisionName | null;
@@ -258,7 +294,7 @@ export default function MapView({
         displayed: filteredFeatures.length,
       },
     };
-  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint, visibleDivisions]);
+  }, [parcelsData, nemOnly, ownersOnly, boundaryPolygon, ownerLookup, findDivisionForPoint, visibleDivisions, sizeRange]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -471,6 +507,9 @@ export default function MapView({
         visibleDivisions={visibleDivisions}
         onToggleDivision={(division: DivisionName) => setVisibleDivisions(prev => ({ ...prev, [division]: !prev[division] }))}
         parcelCounts={parcelCounts}
+        sizeRange={sizeRange}
+        sizeBounds={sizeBounds}
+        onSizeRangeChange={setSizeRange}
       />
 
       {/* Details Panel */}
