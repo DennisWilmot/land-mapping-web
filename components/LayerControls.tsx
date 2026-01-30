@@ -174,129 +174,97 @@ function SizeRangeSlider({
   value,
   bounds,
   onChange,
-  parcelCount,
 }: {
   value: SizeRange;
   bounds: SizeRange;
   onChange: (range: SizeRange) => void;
-  parcelCount?: number;
 }) {
-  // Convert to acres for display
-  const minAcres = sqmtToAcres(value.min);
-  const maxAcres = sqmtToAcres(value.max);
-  const boundsMinAcres = sqmtToAcres(bounds.min);
-  const boundsMaxAcres = sqmtToAcres(bounds.max);
-
-  const handleMinChange = (newMin: number) => {
-    // Ensure min doesn't exceed max
-    const clampedMin = Math.min(newMin, value.max - 1);
-    onChange({ min: Math.max(bounds.min, clampedMin), max: value.max });
-  };
-
-  const handleMaxChange = (newMax: number) => {
-    // Ensure max doesn't go below min
-    const clampedMax = Math.max(newMax, value.min + 1);
-    onChange({ min: value.min, max: Math.min(bounds.max, clampedMax) });
-  };
+  // Work in acres (whole numbers for the slider)
+  const minAcres = Math.round(sqmtToAcres(value.min));
+  const maxAcres = Math.round(sqmtToAcres(value.max));
+  const boundsMinAcres = 0;
+  const boundsMaxAcres = Math.round(sqmtToAcres(bounds.max));
 
   const handleMinAcresChange = (newMinAcres: number) => {
-    const newMinSqmt = acresToSqmt(newMinAcres);
-    onChange({ min: Math.min(newMinSqmt, value.max), max: value.max });
+    const clamped = Math.max(boundsMinAcres, Math.min(newMinAcres, maxAcres - 1));
+    onChange({ min: acresToSqmt(clamped), max: value.max });
   };
 
   const handleMaxAcresChange = (newMaxAcres: number) => {
-    const newMaxSqmt = acresToSqmt(newMaxAcres);
-    onChange({ min: value.min, max: Math.max(newMaxSqmt, value.min) });
+    const clamped = Math.min(boundsMaxAcres, Math.max(newMaxAcres, minAcres + 1));
+    onChange({ min: value.min, max: acresToSqmt(clamped) });
   };
 
-  const minPercent = ((value.min - bounds.min) / (bounds.max - bounds.min)) * 100;
-  const maxPercent = ((value.max - bounds.min) / (bounds.max - bounds.min)) * 100;
+  const minPercent = (minAcres / boundsMaxAcres) * 100;
+  const maxPercent = (maxAcres / boundsMaxAcres) * 100;
 
   return (
     <div className="space-y-3">
       {/* Display current range */}
       <div className="flex justify-between text-xs text-slate-300">
-        <span>{formatSizeDisplay(value.min)}</span>
-        <span>{formatSizeDisplay(value.max)}</span>
+        <span>{minAcres.toLocaleString()} acres</span>
+        <span>{maxAcres.toLocaleString()} acres</span>
       </div>
 
-      {/* Dual range slider - using two separate range inputs with proper z-indexing */}
-      <div className="relative h-6">
+      {/* Dual range slider */}
+      <div className="relative h-8">
         {/* Track background */}
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 bg-slate-700 rounded-full" />
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-2 bg-slate-700 rounded-full" />
         
         {/* Active track */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-1.5 bg-teal-500 rounded-full pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 h-2 bg-teal-500 rounded-full pointer-events-none"
           style={{
             left: `${minPercent}%`,
             right: `${100 - maxPercent}%`,
           }}
         />
 
-        {/* Min slider - positioned for left half interaction */}
+        {/* Min slider */}
         <input
           type="range"
-          min={bounds.min}
-          max={bounds.max}
-          value={value.min}
-          onChange={(e) => handleMinChange(Number(e.target.value))}
-          className="range-slider range-slider-min"
-          style={{
-            background: 'transparent',
-            zIndex: minPercent > 50 ? 5 : 3,
-          }}
+          min={boundsMinAcres}
+          max={boundsMaxAcres}
+          value={minAcres}
+          onChange={(e) => handleMinAcresChange(Number(e.target.value))}
+          className="range-slider"
         />
 
-        {/* Max slider - positioned for right half interaction */}
+        {/* Max slider */}
         <input
           type="range"
-          min={bounds.min}
-          max={bounds.max}
-          value={value.max}
-          onChange={(e) => handleMaxChange(Number(e.target.value))}
-          className="range-slider range-slider-max"
-          style={{
-            background: 'transparent',
-            zIndex: maxPercent <= 50 ? 5 : 4,
-          }}
+          min={boundsMinAcres}
+          max={boundsMaxAcres}
+          value={maxAcres}
+          onChange={(e) => handleMaxAcresChange(Number(e.target.value))}
+          className="range-slider"
         />
 
         {/* Min thumb visual */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none"
-          style={{ left: `calc(${minPercent}% - 8px)`, zIndex: 10 }}
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg border-2 border-teal-500 pointer-events-none"
+          style={{ left: `calc(${minPercent}% - 10px)`, zIndex: 10 }}
         />
 
         {/* Max thumb visual */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-teal-500 pointer-events-none"
-          style={{ left: `calc(${maxPercent}% - 8px)`, zIndex: 10 }}
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg border-2 border-teal-500 pointer-events-none"
+          style={{ left: `calc(${maxPercent}% - 10px)`, zIndex: 10 }}
         />
       </div>
 
-      {/* Parcel count indicator */}
-      {parcelCount !== undefined && (
-        <div className="text-center">
-          <span className="text-xs font-medium text-teal-400">
-            {parcelCount.toLocaleString()}
-          </span>
-          <span className="text-xs text-slate-400"> parcels in range</span>
-        </div>
-      )}
-
-      {/* Manual inputs in acres */}
+      {/* Manual inputs in acres - whole numbers only */}
       <div className="flex gap-2 items-center">
         <div className="flex-1">
           <label className="text-xs text-slate-500 block mb-1">Min (acres)</label>
           <input
             type="number"
-            step="0.01"
-            value={minAcres.toFixed(2)}
+            step="1"
+            value={minAcres}
             onChange={(e) => handleMinAcresChange(Number(e.target.value))}
             min={boundsMinAcres}
             max={boundsMaxAcres}
-            className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
+            className="w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
         <span className="text-slate-500 mt-4">–</span>
@@ -304,18 +272,18 @@ function SizeRangeSlider({
           <label className="text-xs text-slate-500 block mb-1">Max (acres)</label>
           <input
             type="number"
-            step="0.01"
-            value={maxAcres === Infinity ? boundsMaxAcres.toFixed(2) : maxAcres.toFixed(2)}
+            step="1"
+            value={maxAcres}
             onChange={(e) => handleMaxAcresChange(Number(e.target.value))}
             min={boundsMinAcres}
             max={boundsMaxAcres}
-            className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
+            className="w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-teal-500"
           />
         </div>
       </div>
 
       {/* Reset button */}
-      {(value.min !== bounds.min || value.max !== bounds.max) && (
+      {(minAcres !== boundsMinAcres || maxAcres !== boundsMaxAcres) && (
         <button
           onClick={() => onChange({ min: bounds.min, max: bounds.max })}
           className="text-xs text-teal-400 hover:text-teal-300 transition-colors"

@@ -116,21 +116,34 @@ body {
   background: transparent;
   pointer-events: none;
   cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.range-slider::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
 }
 
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   cursor: pointer;
   pointer-events: auto;
+  margin-top: 0;
+}
+
+.range-slider::-moz-range-track {
+  height: 100%;
+  background: transparent;
 }
 
 .range-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   cursor: pointer;
   pointer-events: auto;

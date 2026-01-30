@@ -1,0 +1,292 @@
+# Legend Data Sources and Structure
+# Documents all information displayed in the map legend and where it is pulled from.
+#
+# Components: LegendSheet.tsx (mobile), MapScreen.web.tsx (web - inline legend panel)
+
+overview:
+  description: The legend displays map layer information, boundary types, drawing status colors, and (web only) allocation size filtering.
+  platforms:
+    mobile: LegendSheet.tsx - bottom sheet
+    web: MapScreen.web.tsx - inline panel (lower left, collapsible)
+
+# ─── Props / Inputs ────────────────────────────────────────────────────────
+props:
+  layers:
+    description: Array of layer models with isEnabled state - determines which layers appear in "Map layers" section
+    source: layerController.layers from useLayerController()
+    location: lib/map/hooks/use-layer-controller.ts
+  electoralDivisionsVisible:
+    description: Whether electoral divisions boundary layer is visible
+    source: MapScreen state (constituencyVisible, electoralDivisionsVisible)
+    location: lib/map/components/MapScreen.tsx, MapScreen.web.tsx
+  communityVisible:
+    description: Whether community boundaries layer is visible
+    source: MapScreen state (communityVisible)
+    location: lib/map/components/MapScreen.tsx, MapScreen.web.tsx
+
+# ─── Section 1: Boundaries ─────────────────────────────────────────────────
+boundaries:
+  description: Community and electoral division boundary layers
+  visibility: Shown when communityVisible OR electoralDivisionsVisible
+
+  community_boundaries:
+    label: "Community boundaries"
+    description: "Community and locality boundary lines"
+    symbol_shape: line
+    color: "#10B981"
+    color_source: Hardcoded in LegendSheet.tsx (emerald green)
+    map_data_source: lib/map/data/community.json
+    map_component: MapLayers.tsx - LineLayer id="community-line"
+    icon: Trees (lucide-react-native)
+
+  electoral_divisions:
+    label: "Electoral divisions"
+    description: "Colored boundaries by division"
+    symbol_shape: polygon
+    divisions:
+      - id: CRAIGHEAD
+        label_source: formatDivisionLabel() - lib/map/types/layer.ts
+        color_source: ELECTORAL_DIVISION_COLORS - lib/map/services/electoral-division-service.ts
+        color: "#FFB6DB"  # Pale pink
+      - id: CHRISTIANA
+        color: "#F4DE7E"  # Light cream
+      - id: WALDERSTON
+        color: "#A5DAF3"  # Light blue
+    map_data_source: lib/map/data/community.json (processed by processCommunityGeoJsonWithDivisions)
+    electoral_division_service: lib/map/services/electoral-division-service.ts
+    icon: Map (lucide-react-native)
+
+# ─── Section 2: Drawing Statuses (Layers with Conditions) ───────────────────
+drawing_statuses:
+  description: Layers that have status/condition options (e.g. road condition, land use). Shown for drawn features.
+  visibility: Always shown when LAYER_DEFINITIONS has layers with statuses
+  data_source: lib/map/types/layer.ts - LAYER_DEFINITIONS filtered by statuses?.length > 0
+  grouping: By LAYER_CATEGORIES (Infrastructure, Development, Allocation, Assets)
+
+  layers:
+    roads:
+      id: roads
+      name: "Roads"
+      description: "Road network and streets"
+      category: Infrastructure
+      icon: route (LAYER_ICON_MAP)
+      default_color: "#757575"
+      statuses_source: ROAD_CONDITION_STATUSES - lib/map/types/layer.ts
+      statuses:
+        - id: critical
+          name: "Critical"
+          description: "Severe damage, unsafe or impassable"
+          color: "#DC2626"
+        - id: poor
+          name: "Poor"
+          description: "Significant deterioration"
+          color: "#EA580C"
+        - id: fair
+          name: "Fair"
+          description: "Moderate wear, passable"
+          color: "#CA8A04"
+        - id: good
+          name: "Good"
+          description: "Well maintained"
+          color: "#16A34A"
+      symbol_shape: line
+
+    electricity:
+      id: electricity
+      name: "Electricity"
+      description: "Power lines and electrical infrastructure"
+      category: Infrastructure
+      icon: zap
+      default_color: "#FFB300"
+      statuses_source: POWER_CONDITION_STATUSES - lib/map/types/layer.ts
+      statuses:
+        - id: critical
+          name: "Critical"
+          description: "Failing or unsafe infrastructure"
+          color: "#DC2626"
+        - id: poor
+          name: "Poor"
+          description: "Significant issues"
+          color: "#EA580C"
+        - id: fair
+          name: "Fair"
+          description: "Adequate, some maintenance needed"
+          color: "#CA8A04"
+        - id: good
+          name: "Good"
+          description: "Reliable, well maintained"
+          color: "#16A34A"
+      symbol_shape: line
+
+    land:
+      id: land
+      name: "Land"
+      description: "Land use and development level"
+      category: Development
+      icon: mountain
+      default_color: "#8B4513"
+      statuses_source: LAND_STATUSES - lib/map/types/layer.ts
+      statuses:
+        - id: undeveloped
+          name: "Undeveloped"
+          description: "Bush, greenery, no development"
+          color: "#8B4513"
+        - id: underdeveloped
+          name: "Underdeveloped"
+          description: "Broken-down buildings, one-off houses"
+          color: "#F59E0B"
+        - id: developed
+          name: "Developed"
+          description: "Populated towns, cities, residential"
+          color: "#10B981"
+      symbol_shape: polygon
+
+# ─── Section 3: Map Layers (Enabled layers without statuses) ────────────────
+map_layers:
+  description: Data layers displayed on the map. Excludes layers with statuses (Roads, Land, Electricity shown in drawing_statuses instead).
+  visibility: Shown for each enabled layer that has no statuses
+  data_source: layers prop filtered by isEnabled, excluding def.statuses?.length
+  color_source: getLayerColor(layer.id) - lib/map/types/layer.ts (uses LAYER_COLORS, layer.defaultColor)
+
+  layer_definitions_source: lib/map/types/layer.ts - LAYER_DEFINITIONS
+
+  infrastructure_layers:
+    water_bodies:
+      id: water_bodies
+      name: "Water bodies"
+      description: "Ponds, lakes, reservoirs"
+      color: "#2196F3"
+      icon: waves
+      symbol_shape: polygon
+      map_data: Mapbox base style layers (water, waterway) - toggled via lib/map/services/mapbox-layer-service.ts
+    water_rivers:
+      id: water_rivers
+      name: "Rivers & streams"
+      description: "Rivers, streams, canals"
+      color: "#0EA5E9"
+      icon: waves
+      symbol_shape: line
+    sanitation:
+      id: sanitation
+      name: "Sanitation"
+      description: "Drainage and sewer lines"
+      color: "#8B4513"
+      icon: droplet
+      symbol_shape: line
+    broadband:
+      id: broadband
+      name: "Broadband"
+      description: "Internet connectivity"
+      color: "#9C27B0"
+      icon: radio-tower
+      symbol_shape: line
+
+  assets_layers:
+    starlink:
+      id: starlink
+      name: "Starlink Sites"
+      description: "Starlink satellite internet sites"
+      color: "#00BCD4"
+      icon: satellite
+      symbol_shape: circle
+      map_data: lib/map/data/starlink.json
+
+  allocation_layers:
+    parcel_government:
+      id: parcel_government
+      name: "Commissioner of Lands"
+      description: "Government land parcels"
+      color: "#3B82F6"
+      icon: square
+      symbol_shape: polygon
+      map_data: lib/map/data/parcel.json (filtered by LV_NUMBER via getParcelAllocation)
+      allocation_logic: lib/map/utils/parcel-allocation.ts
+    parcel_reynolds_metal_company:
+      id: parcel_reynolds_metal_company
+      name: "Reynolds Metal Company"
+      description: "Reynolds Metal Company parcels"
+      color: "#DC2626"
+      icon: square
+      symbol_shape: polygon
+      map_data: lib/map/data/parcel.json
+    parcel_private:
+      id: parcel_private
+      name: "Private"
+      description: "Private land parcels"
+      color: "#8B5CF6"
+      icon: square
+      symbol_shape: polygon
+      map_data: lib/map/data/parcel.json
+
+# ─── Symbol Shapes ─────────────────────────────────────────────────────────
+symbol_shapes:
+  description: getLegendShapeForLayer() - lib/map/types/layer.ts
+  polygon_layers:
+    - parcel_government
+    - parcel_reynolds_metal_company
+    - parcel_private
+    - parcel
+    - land
+    - water_bodies
+    - allocation_government
+    - allocation_private
+  circle_layers:
+    - starlink
+  line_layers: "All others (roads, water_rivers, electricity, sanitation, broadband)"
+
+# ─── Web-Only: Allocation Size Filter ──────────────────────────────────────
+allocation_filter:
+  platform: web only
+  location: MapScreen.web.tsx - legendFilterSection
+  description: "Filter by size (acres)"
+  min_label: "Min: {value} acres" or "Min: No min"
+  max_label: "Max: {value} acres"
+  data_source: parcel.json feature properties
+  property_name: SIZE_SQMT (or size_sqmt)
+  conversion: square meters to acres via formatAreaInAcresAndSqM (SQ_M_PER_ACRE = 4046.8564224)
+  filter_logic: Mapbox setFilter on parcel fill layers - lib/map/components/MapScreen.web.tsx
+  state: allocationMinAcres, allocationMaxAcres (default 0, 100)
+  max_slider: ALLOCATION_ACRE_MAX_SLIDER = 100
+
+# ─── GeoJSON Data Files ────────────────────────────────────────────────────
+data_files:
+  constituency:
+    path: lib/map/data/constituency.json
+    usage: Constituency boundary, mask layer, map bounds
+  community:
+    path: lib/map/data/community.json
+    usage: Community boundaries (lines), electoral divisions (processed)
+  parcel:
+    path: lib/map/data/parcel.json
+    usage: Allocation parcels - filtered by LV_NUMBER for government/Reynolds/private
+    key_properties: LV_NUMBER, SIZE_SQMT, FULLADDRES, SCHEME_ADD, LOCATION, PARISH, PID, VOL_FOL, STREET_ADD
+  starlink:
+    path: lib/map/data/starlink.json
+    usage: Starlink site point features
+
+# ─── Key Functions / Utilities ─────────────────────────────────────────────
+key_functions:
+  getLayerColor:
+    file: lib/map/types/layer.ts
+    description: Resolves color for layer (and optional conditionId from statuses)
+  getLayerById:
+    file: lib/map/types/layer.ts
+    description: Finds layer definition by id, handles legacy subcategory mapping
+  getLegendShapeForLayer:
+    file: lib/map/types/layer.ts
+    description: Returns 'polygon' | 'line' | 'circle' for legend symbol
+  formatDivisionLabel:
+    file: lib/map/types/layer.ts
+    description: Formats division id (e.g. CRAIGHEAD) to display (e.g. Craighead)
+  getCategoryColor:
+    file: lib/map/types/layer.ts
+    description: Returns color for category label (first layer in category)
+  ELECTORAL_DIVISION_COLORS:
+    file: lib/map/services/electoral-division-service.ts
+    description: CRAIGHEAD, CHRISTIANA, WALDERSTON hex colors
+  processCommunityGeoJsonWithDivisions:
+    file: lib/map/services/electoral-division-service.ts
+    description: Assigns ELECTORAL_DIVISION and color to community features by COMM_NAME_
+  getParcelAllocation:
+    file: lib/map/utils/parcel-allocation.ts
+    description: Maps LV_NUMBER to government | reynolds_metal_company | private
