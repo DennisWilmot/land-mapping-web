@@ -74,9 +74,9 @@ export default function MapView({
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
   const [sizeRange, setSizeRange] = useState<{ min: number; max: number }>({ min: 0, max: Infinity });
 
-  // Compute size bounds from parcel data (capped at 14,000 acres max)
-  const MAX_ACRES = 14000;
-  const MAX_SQMT = MAX_ACRES * 4046.86; // ~56.6 million m²
+  // Compute size bounds from parcel data (capped at 2,500 acres max for usable slider)
+  const MAX_ACRES = 2500;
+  const MAX_SQMT = MAX_ACRES * 4046.86; // ~10.1 million m²
   
   const sizeBounds = useMemo(() => {
     if (!parcelsData) return { min: 0, max: MAX_SQMT };
