@@ -1,4 +1,5 @@
 import type { FeatureCollection, Polygon, MultiPolygon, Feature, GeoJsonProperties } from 'geojson';
+import dissolve from '@turf/dissolve';
 
 /**
  * Electoral division colors matching the map legend
@@ -12,7 +13,7 @@ export const ELECTORAL_DIVISION_COLORS: Record<string, string> = {
 export type DivisionName = 'CRAIGHEAD' | 'CHRISTIANA' | 'WALDERSTON';
 
 export interface DivisionProperties extends GeoJsonProperties {
-  COMM_NAME_: string;
+  COMM_NAME_?: string;
   ELECTORAL_DIVISION: DivisionName;
   color: string;
 }
@@ -137,4 +138,60 @@ export function groupByDivision(
     CHRISTIANA: { type: 'FeatureCollection', features: grouped.CHRISTIANA },
     WALDERSTON: { type: 'FeatureCollection', features: grouped.WALDERSTON },
   };
+}
+
+/**
+ * Creates merged/dissolved boundaries for each division.
+ * This produces 3 clean polygon boundaries - one per division.
+ */
+export function createMergedDivisionBoundaries(
+  divisionsGeoJson: FeatureCollection<Polygon | MultiPolygon, DivisionProperties>
+): Record<DivisionName, Feature<Polygon | MultiPolygon, DivisionProperties>> {
+  const grouped = groupByDivision(divisionsGeoJson);
+  
+  const mergedBoundaries: Record<DivisionName, Feature<Polygon | MultiPolygon, DivisionProperties>> = {} as Record<DivisionName, Feature<Polygon | MultiPolygon, DivisionProperties>>;
+  
+  (Object.keys(grouped) as DivisionName[]).forEach(division => {
+    const fc = grouped[division];
+    
+    if (fc.features.length === 0) {
+      return;
+    }
+    
+    // Dissolve all polygons in this division into one
+    // First, ensure all features have the same property for dissolving
+    const fcWithProp: FeatureCollection<Polygon> = {
+      type: 'FeatureCollection',
+      features: fc.features.map(f => ({
+        type: 'Feature' as const,
+        geometry: f.geometry.type === 'MultiPolygon' 
+          ? { type: 'Polygon' as const, coordinates: f.geometry.coordinates[0] }
+          : f.geometry as Polygon,
+        properties: { division },
+      })),
+    };
+    
+    try {
+      const dissolved = dissolve(fcWithProp, { propertyName: 'division' });
+      
+      if (dissolved.features.length > 0) {
+        mergedBoundaries[division] = {
+          type: 'Feature',
+          geometry: dissolved.features[0].geometry,
+          properties: {
+            ELECTORAL_DIVISION: division,
+            color: ELECTORAL_DIVISION_COLORS[division],
+          },
+        } as Feature<Polygon | MultiPolygon, DivisionProperties>;
+      }
+    } catch (e) {
+      console.error(`Failed to dissolve ${division}:`, e);
+      // Fallback: use first feature
+      if (fc.features.length > 0) {
+        mergedBoundaries[division] = fc.features[0];
+      }
+    }
+  });
+  
+  return mergedBoundaries;
 }
