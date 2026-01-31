@@ -12,6 +12,7 @@
     "@turf/boolean-point-in-polygon": "^7.3.3",
     "@turf/centroid": "^7.3.3",
     "@turf/dissolve": "^7.3.3",
+    "jspdf": "^4.0.0",
     "mapbox-gl": "^3.3.0",
     "next": "14.2.3",
     "papaparse": "^5.4.1",

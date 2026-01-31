@@ -23,7 +23,9 @@ import {
 } from "@/lib/geo/electoral-divisions";
 import type { ParcelProperties } from "@/lib/data/parcels";
 import { formatParcelSize } from "@/lib/data/parcels";
-import { useSavedSelections } from "@/lib/hooks/useSavedSelections";
+import { useProjects } from "@/lib/hooks/useProjects";
+import { generateProjectReport, downloadReport } from "@/lib/pdf/generateProjectReport";
+import type { SavedProject } from "@/lib/types/project";
 import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
 import MultiParcelPanel from "./MultiParcelPanel";
@@ -88,17 +90,17 @@ export default function MapView({
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
   const [sizeRange, setSizeRange] = useState<{ min: number; max: number }>({ min: 0, max: Infinity });
 
-  // Saved selections
+  // Projects
   const {
-    selections: savedSelections,
-    saveSelection,
-    updateSelection,
-    renameSelection,
-    deleteSelection,
-    getSelection,
-  } = useSavedSelections();
-  const [activeSelectionId, setActiveSelectionId] = useState<string | null>(null);
-  const [activeSelectionName, setActiveSelectionName] = useState<string | null>(null);
+    projects: savedProjects,
+    saveProject,
+    updateProject,
+    renameProject,
+    deleteProject,
+    getProject,
+  } = useProjects();
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeProjectName, setActiveProjectName] = useState<string | null>(null);
 
   // Compute size bounds from parcel data (capped at 2,500 acres max for usable slider)
   const MAX_ACRES = 2500;
@@ -311,25 +313,25 @@ export default function MapView({
     setSelectedParcels(reorderedParcels);
   }, []);
 
-  // Save a new selection
-  const handleSaveSelection = useCallback((name: string) => {
+  // Save a new project
+  const handleSaveProject = useCallback((name: string) => {
     const parcelIds = selectedParcels.map(p => p.properties.OBJECTID);
-    const newSelection = saveSelection(name, parcelIds);
-    setActiveSelectionId(newSelection.id);
-    setActiveSelectionName(newSelection.name);
-  }, [selectedParcels, saveSelection]);
+    const newProject = saveProject(name, parcelIds);
+    setActiveProjectId(newProject.id);
+    setActiveProjectName(newProject.name);
+  }, [selectedParcels, saveProject]);
 
-  // Update the active selection with current parcels
-  const handleUpdateSelection = useCallback(() => {
-    if (!activeSelectionId) return;
+  // Update the active project with current parcels
+  const handleUpdateProject = useCallback(() => {
+    if (!activeProjectId) return;
     const parcelIds = selectedParcels.map(p => p.properties.OBJECTID);
-    updateSelection(activeSelectionId, parcelIds);
-  }, [activeSelectionId, selectedParcels, updateSelection]);
+    updateProject(activeProjectId, parcelIds);
+  }, [activeProjectId, selectedParcels, updateProject]);
 
-  // Load a saved selection - restore parcels on map
-  const handleLoadSelection = useCallback((selectionId: string) => {
-    const selection = getSelection(selectionId);
-    if (!selection || !parcelsData) return;
+  // Load a saved project - restore parcels on map
+  const handleLoadProject = useCallback((projectId: string) => {
+    const project = getProject(projectId);
+    if (!project || !parcelsData) return;
 
     // Build a lookup of all parcels by OBJECTID
     const parcelLookup: Record<number, Feature<Polygon, ParcelProperties>> = {};
@@ -341,8 +343,8 @@ export default function MapView({
 
     // Restore the selected parcels in order
     const restoredParcels: SelectedParcel[] = [];
-    for (let i = 0; i < selection.parcelIds.length; i++) {
-      const objectId = selection.parcelIds[i];
+    for (let i = 0; i < project.parcelIds.length; i++) {
+      const objectId = project.parcelIds[i];
       const feature = parcelLookup[objectId];
       if (feature && feature.properties) {
         const center = centroid(feature);
@@ -356,8 +358,8 @@ export default function MapView({
     }
 
     setSelectedParcels(restoredParcels);
-    setActiveSelectionId(selectionId);
-    setActiveSelectionName(selection.name);
+    setActiveProjectId(projectId);
+    setActiveProjectName(project.name);
 
     // Optionally fly to the first parcel
     if (restoredParcels.length > 0 && mapRef.current) {
@@ -368,33 +370,96 @@ export default function MapView({
         duration: 1500,
       });
     }
-  }, [getSelection, parcelsData]);
+  }, [getProject, parcelsData]);
 
-  // Handle renaming a selection
-  const handleRenameSelection = useCallback((id: string, name: string) => {
-    renameSelection(id, name);
-    // Update active name if this is the active selection
-    if (id === activeSelectionId) {
-      setActiveSelectionName(name);
+  // Handle renaming a project
+  const handleRenameProject = useCallback((id: string, name: string) => {
+    renameProject(id, name);
+    // Update active name if this is the active project
+    if (id === activeProjectId) {
+      setActiveProjectName(name);
     }
-  }, [renameSelection, activeSelectionId]);
+  }, [renameProject, activeProjectId]);
 
-  // Handle deleting a selection
-  const handleDeleteSelection = useCallback((id: string) => {
-    deleteSelection(id);
-    // Clear active selection if this was it
-    if (id === activeSelectionId) {
-      setActiveSelectionId(null);
-      setActiveSelectionName(null);
+  // Handle deleting a project
+  const handleDeleteProject = useCallback((id: string) => {
+    deleteProject(id);
+    // Clear active project if this was it
+    if (id === activeProjectId) {
+      setActiveProjectId(null);
+      setActiveProjectName(null);
     }
-  }, [deleteSelection, activeSelectionId]);
+  }, [deleteProject, activeProjectId]);
 
-  // Clear active selection when parcels are manually cleared
+  // Clear active project when parcels are manually cleared
   const handleCloseAndClearActive = useCallback(() => {
     setSelectedParcels([]);
-    setActiveSelectionId(null);
-    setActiveSelectionName(null);
+    setActiveProjectId(null);
+    setActiveProjectName(null);
   }, []);
+
+  // Export report state and handler
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportReport = useCallback(async () => {
+    if (selectedParcels.length === 0 || !parcelsData) return;
+    
+    setIsExporting(true);
+    
+    try {
+      // Build a lookup of parcel features by OBJECTID
+      const parcelLookup: Record<number, Feature<Polygon, ParcelProperties>> = {};
+      for (const feature of parcelsData.features) {
+        if (feature.properties?.OBJECTID) {
+          parcelLookup[feature.properties.OBJECTID] = feature;
+        }
+      }
+
+      // Build parcel data for the report
+      const parcelsForReport = selectedParcels.map((selected) => {
+        const feature = parcelLookup[selected.properties.OBJECTID];
+        const owner = selected.properties.LV_NUMBER 
+          ? ownerLookup.get(selected.properties.LV_NUMBER) || null 
+          : null;
+        
+        return {
+          parcel: feature || { 
+            type: "Feature" as const, 
+            properties: selected.properties, 
+            geometry: { type: "Polygon" as const, coordinates: [] } 
+          },
+          owner,
+          selectionOrder: selected.selectionOrder,
+        };
+      });
+
+      // Create a temporary project object if not already saved
+      const project: SavedProject = activeProjectId && activeProjectName
+        ? { 
+            id: activeProjectId, 
+            name: activeProjectName, 
+            parcelIds: selectedParcels.map(p => p.properties.OBJECTID),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }
+        : {
+            id: "temp",
+            name: "Multi-Parcel Project",
+            parcelIds: selectedParcels.map(p => p.properties.OBJECTID),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+
+      // Generate and download the report
+      const blob = await generateProjectReport(project, parcelsForReport);
+      downloadReport(blob, project.name);
+    } catch (error) {
+      console.error("Failed to export report:", error);
+      alert("Failed to generate report. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [selectedParcels, parcelsData, ownerLookup, activeProjectId, activeProjectName]);
 
   const toggleLayer = useCallback((layer: keyof typeof visibleLayers) => {
     setVisibleLayers((prev) => ({
@@ -852,11 +917,11 @@ export default function MapView({
         sizeRange={sizeRange}
         sizeBounds={sizeBounds}
         onSizeRangeChange={setSizeRange}
-        savedSelections={savedSelections}
-        activeSelectionId={activeSelectionId}
-        onLoadSelection={handleLoadSelection}
-        onRenameSelection={handleRenameSelection}
-        onDeleteSelection={handleDeleteSelection}
+        savedProjects={savedProjects}
+        activeProjectId={activeProjectId}
+        onLoadProject={handleLoadProject}
+        onRenameProject={handleRenameProject}
+        onDeleteProject={handleDeleteProject}
       />
 
       {/* Stats Card - Top Right */}
@@ -889,10 +954,12 @@ export default function MapView({
           onRemoveParcel={handleRemoveParcel}
           onClearAll={handleCloseAndClearActive}
           onReorderParcels={handleReorderParcels}
-          onSaveSelection={handleSaveSelection}
-          onUpdateSelection={handleUpdateSelection}
-          activeSelectionId={activeSelectionId}
-          activeSelectionName={activeSelectionName}
+          onSaveProject={handleSaveProject}
+          onUpdateProject={handleUpdateProject}
+          activeProjectId={activeProjectId}
+          activeProjectName={activeProjectName}
+          onExportReport={handleExportReport}
+          isExporting={isExporting}
         />
       )}
     </div>

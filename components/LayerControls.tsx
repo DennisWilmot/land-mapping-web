@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import type { MapStyle } from "./MapView";
 import type { DivisionName } from "@/lib/geo/electoral-divisions";
 import { ELECTORAL_DIVISION_COLORS } from "@/lib/geo/electoral-divisions";
-import type { SavedSelection } from "@/lib/types/saved-selection";
+import type { SavedProject } from "@/lib/types/project";
 
 // Chevron icon for collapse/expand
 function ChevronIcon({ expanded }: { expanded: boolean }) {
@@ -55,12 +55,12 @@ interface LayerControlsProps {
   sizeRange: SizeRange;
   sizeBounds: SizeRange;
   onSizeRangeChange: (range: SizeRange) => void;
-  // Saved selections
-  savedSelections: SavedSelection[];
-  activeSelectionId: string | null;
-  onLoadSelection: (id: string) => void;
-  onRenameSelection: (id: string, name: string) => void;
-  onDeleteSelection: (id: string) => void;
+  // Projects
+  savedProjects: SavedProject[];
+  activeProjectId: string | null;
+  onLoadProject: (id: string) => void;
+  onRenameProject: (id: string, name: string) => void;
+  onDeleteProject: (id: string) => void;
 }
 
 // Icon components for legend
@@ -397,22 +397,22 @@ function formatDate(timestamp: number): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Saved Selection Item Component
-function SavedSelectionItem({
-  selection,
+// Project Item Component
+function ProjectItem({
+  project,
   isActive,
   onLoad,
   onRename,
   onDelete,
 }: {
-  selection: SavedSelection;
+  project: SavedProject;
   isActive: boolean;
   onLoad: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(selection.name);
+  const [editName, setEditName] = useState(project.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -423,7 +423,7 @@ function SavedSelectionItem({
   }, [isEditing]);
 
   const handleSaveRename = () => {
-    if (editName.trim() && editName.trim() !== selection.name) {
+    if (editName.trim() && editName.trim() !== project.name) {
       onRename(editName.trim());
     }
     setIsEditing(false);
@@ -448,7 +448,7 @@ function SavedSelectionItem({
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSaveRename();
               if (e.key === "Escape") {
-                setEditName(selection.name);
+                setEditName(project.name);
                 setIsEditing(false);
               }
             }}
@@ -464,11 +464,11 @@ function SavedSelectionItem({
                 <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
               )}
               <span className="text-sm text-white font-medium truncate">
-                {selection.name}
+                {project.name}
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-0.5">
-              {selection.parcelIds.length} parcels · {formatDate(selection.updatedAt)}
+              {project.parcelIds.length} parcels · {formatDate(project.updatedAt)}
             </div>
           </div>
           
@@ -489,7 +489,7 @@ function SavedSelectionItem({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Delete "${selection.name}"?`)) {
+                if (confirm(`Delete project "${project.name}"?`)) {
                   onDelete();
                 }
               }}
@@ -531,14 +531,14 @@ export default function LayerControls({
   sizeRange,
   sizeBounds,
   onSizeRangeChange,
-  savedSelections,
-  activeSelectionId,
-  onLoadSelection,
-  onRenameSelection,
-  onDeleteSelection,
+  savedProjects,
+  activeProjectId,
+  onLoadProject,
+  onRenameProject,
+  onDeleteProject,
 }: LayerControlsProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [savedSelectionsExpanded, setSavedSelectionsExpanded] = useState(true);
+  const [projectsExpanded, setProjectsExpanded] = useState(true);
 
   return (
     <div className="absolute top-4 left-4 z-10 glass-panel min-w-[220px] max-w-[280px] flex flex-col max-h-[calc(100vh-120px)]">
@@ -696,44 +696,44 @@ export default function LayerControls({
             </button>
           </div>
 
-          {/* Saved Selections Section */}
+          {/* Projects Section */}
           <div>
             <button
-              onClick={() => setSavedSelectionsExpanded(!savedSelectionsExpanded)}
+              onClick={() => setProjectsExpanded(!projectsExpanded)}
               className="flex items-center justify-between w-full mb-3 group"
             >
               <div className="flex items-center gap-2">
                 <BookmarkIcon />
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300">
-                  Saved Selections
+                  Projects
                 </h3>
-                {savedSelections.length > 0 && (
+                {savedProjects.length > 0 && (
                   <span className="text-xs text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded">
-                    {savedSelections.length}
+                    {savedProjects.length}
                   </span>
                 )}
               </div>
-              <ChevronIcon expanded={savedSelectionsExpanded} />
+              <ChevronIcon expanded={projectsExpanded} />
             </button>
 
-            {savedSelectionsExpanded && (
+            {projectsExpanded && (
               <div className="space-y-2">
-                {savedSelections.length === 0 ? (
+                {savedProjects.length === 0 ? (
                   <div className="text-xs text-slate-500 text-center py-4 px-2 bg-slate-800/30 rounded-lg">
-                    <p>No saved selections yet</p>
+                    <p>No projects yet</p>
                     <p className="mt-1 text-slate-600">
-                      Select parcels and click "Save Selection" to save them
+                      Select parcels and click "Save Project" to create one
                     </p>
                   </div>
                 ) : (
-                  savedSelections.map((selection) => (
-                    <SavedSelectionItem
-                      key={selection.id}
-                      selection={selection}
-                      isActive={activeSelectionId === selection.id}
-                      onLoad={() => onLoadSelection(selection.id)}
-                      onRename={(name) => onRenameSelection(selection.id, name)}
-                      onDelete={() => onDeleteSelection(selection.id)}
+                  savedProjects.map((project) => (
+                    <ProjectItem
+                      key={project.id}
+                      project={project}
+                      isActive={activeProjectId === project.id}
+                      onLoad={() => onLoadProject(project.id)}
+                      onRename={(name) => onRenameProject(project.id, name)}
+                      onDelete={() => onDeleteProject(project.id)}
                     />
                   ))
                 )}

@@ -11,11 +11,33 @@ interface MultiParcelPanelProps {
   onRemoveParcel: (objectId: number) => void;
   onClearAll: () => void;
   onReorderParcels: (reorderedParcels: SelectedParcel[]) => void;
-  // Save functionality
-  onSaveSelection: (name: string) => void;
-  onUpdateSelection: () => void;
-  activeSelectionId: string | null;
-  activeSelectionName: string | null;
+  // Project functionality
+  onSaveProject: (name: string) => void;
+  onUpdateProject: () => void;
+  activeProjectId: string | null;
+  activeProjectName: string | null;
+  // Export functionality
+  onExportReport: () => Promise<void>;
+  isExporting: boolean;
+}
+
+// Export/PDF icon component
+function ExportIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+// Loading spinner
+function LoadingSpinner() {
+  return (
+    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+  );
 }
 
 // Save icon component
@@ -182,10 +204,12 @@ export default function MultiParcelPanel({
   onRemoveParcel,
   onClearAll,
   onReorderParcels,
-  onSaveSelection,
-  onUpdateSelection,
-  activeSelectionId,
-  activeSelectionName,
+  onSaveProject,
+  onUpdateProject,
+  activeProjectId,
+  activeProjectName,
+  onExportReport,
+  isExporting,
 }: MultiParcelPanelProps) {
   const [copied, setCopied] = useState(false);
   const [showSaveInput, setShowSaveInput] = useState(false);
@@ -202,16 +226,16 @@ export default function MultiParcelPanel({
   // Handle save submission
   const handleSave = useCallback(() => {
     if (saveName.trim()) {
-      onSaveSelection(saveName.trim());
+      onSaveProject(saveName.trim());
       setSaveName("");
       setShowSaveInput(false);
     }
-  }, [saveName, onSaveSelection]);
+  }, [saveName, onSaveProject]);
 
-  // Handle update existing selection
+  // Handle update existing project
   const handleUpdate = useCallback(() => {
-    onUpdateSelection();
-  }, [onUpdateSelection]);
+    onUpdateProject();
+  }, [onUpdateProject]);
 
   // Drag and drop state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -389,7 +413,7 @@ export default function MultiParcelPanel({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">
-                {activeSelectionName || "Multi-Parcel Selection"}
+                {activeProjectName || "Multi-Parcel Project"}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {selectedParcels.length} parcels · {totalAcres.toFixed(1)} acres total
@@ -407,6 +431,19 @@ export default function MultiParcelPanel({
               >
                 <ClipboardIcon copied={copied} />
                 {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                onClick={onExportReport}
+                disabled={isExporting}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
+                  isExporting
+                    ? 'bg-orange-700 text-white cursor-wait'
+                    : 'bg-orange-600 hover:bg-orange-500 text-white'
+                }`}
+                title="Export PDF report"
+              >
+                {isExporting ? <LoadingSpinner /> : <ExportIcon />}
+                {isExporting ? 'Exporting...' : 'Export'}
               </button>
               <button
                 onClick={onClearAll}
@@ -433,7 +470,7 @@ export default function MultiParcelPanel({
                       setSaveName("");
                     }
                   }}
-                  placeholder="Enter selection name..."
+                  placeholder="Enter project name..."
                   className="flex-1 px-3 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
                 />
                 <button
@@ -455,20 +492,20 @@ export default function MultiParcelPanel({
               </div>
             ) : (
               <div className="flex gap-2">
-                {activeSelectionId ? (
+                {activeProjectId ? (
                   <>
                     <button
                       onClick={handleUpdate}
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors"
-                      title="Update this saved selection"
+                      title="Update this project"
                     >
                       <SaveIcon />
-                      Update Selection
+                      Update Project
                     </button>
                     <button
                       onClick={() => setShowSaveInput(true)}
                       className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                      title="Save as new selection"
+                      title="Save as new project"
                     >
                       Save As New
                     </button>
@@ -477,10 +514,10 @@ export default function MultiParcelPanel({
                   <button
                     onClick={() => setShowSaveInput(true)}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors"
-                    title="Save this selection for later"
+                    title="Save this project for later"
                   >
                     <SaveIcon />
-                    Save Selection
+                    Save Project
                   </button>
                 )}
               </div>
