@@ -25,6 +25,7 @@ import type { ParcelProperties } from "@/lib/data/parcels";
 import { formatParcelSize } from "@/lib/data/parcels";
 import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
+import SearchBar, { type SearchResult } from "./SearchBar";
 import type { Address } from "@/lib/data/addresses";
 import type { Owner } from "@/lib/data/owners";
 
@@ -243,6 +244,43 @@ export default function MapView({
       ...prev,
       [layer]: !prev[layer],
     }));
+  }, []);
+
+  // Handle search result selection - fly to location and select feature
+  const handleSearchResult = useCallback((result: SearchResult) => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    // Fly to the result location
+    map.flyTo({
+      center: result.coordinates,
+      zoom: result.type === "division" ? 12 : 16,
+      duration: 1500,
+    });
+
+    // Handle different result types
+    switch (result.type) {
+      case "parcel":
+        // Select the parcel and open details panel
+        const parcelFeature = result.data as Feature<Polygon, ParcelProperties>;
+        if (parcelFeature.properties) {
+          setSelectedParcel(parcelFeature.properties);
+        }
+        break;
+      case "division":
+        // Make sure the division is visible
+        const divisionName = result.data as DivisionName;
+        setVisibleDivisions((prev) => ({ ...prev, [divisionName]: true }));
+        break;
+      case "starlink":
+        // Make sure starlink layer is visible
+        setVisibleLayers((prev) => ({ ...prev, starlink: true }));
+        break;
+      case "address":
+        // Make sure addresses layer is visible
+        setVisibleLayers((prev) => ({ ...prev, addresses: true }));
+        break;
+    }
   }, []);
 
   // Get the boundary polygon for filtering
@@ -578,6 +616,14 @@ export default function MapView({
           </div>
         </div>
       )}
+
+      {/* Search Bar */}
+      <SearchBar
+        parcelsData={parcelsData}
+        addressesData={addressesData}
+        starlinkData={starlinkData}
+        onResultSelect={handleSearchResult}
+      />
 
       {/* Layer Controls */}
       <LayerControls
