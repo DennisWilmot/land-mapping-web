@@ -25,6 +25,7 @@ import type { ParcelProperties } from "@/lib/data/parcels";
 import { formatParcelSize } from "@/lib/data/parcels";
 import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
+import MultiParcelPanel from "./MultiParcelPanel";
 import SearchBar, { type SearchResult } from "./SearchBar";
 import type { Address } from "@/lib/data/addresses";
 import type { Owner } from "@/lib/data/owners";
@@ -44,6 +45,12 @@ interface HoveredFeature {
   id: string | number;
   properties: ParcelProperties;
   lngLat: { lng: number; lat: number };
+}
+
+export interface SelectedParcel {
+  properties: ParcelProperties;
+  center: [number, number]; // [lng, lat] for marker placement
+  selectionOrder: number;   // 1, 2, 3...
 }
 
 export default function MapView({
@@ -68,7 +75,7 @@ export default function MapView({
   const [mapLoaded, setMapLoaded] = useState(false);
   
   const [hoveredFeature, setHoveredFeature] = useState<HoveredFeature | null>(null);
-  const [selectedParcel, setSelectedParcel] = useState<ParcelProperties | null>(null);
+  const [selectedParcels, setSelectedParcels] = useState<SelectedParcel[]>([]);
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const [nemOnly, setNemOnly] = useState(true);
   const [ownersOnly, setOwnersOnly] = useState(false);
@@ -229,14 +236,61 @@ export default function MapView({
       layers: ["parcels-fill"],
     });
 
-    if (features.length > 0) {
-      const properties = features[0].properties as ParcelProperties;
-      setSelectedParcel(properties);
+    if (features.length === 0) {
+      // Clicked outside any parcel - clear selection
+      setSelectedParcels([]);
+      return;
     }
+
+    const feature = features[0];
+    const properties = feature.properties as ParcelProperties;
+    const origEvt = e.originalEvent as PointerEvent;
+    // Support Cmd (Mac) and Ctrl (Windows/Linux) for multi-select
+    // Note: Shift+Click is intercepted by Mapbox for box-zoom
+    const isMultiSelectKey = origEvt?.metaKey || origEvt?.ctrlKey || false;
+    
+    // Calculate parcel center from geometry
+    let center: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+    if (feature.geometry.type === 'Polygon') {
+      const coords = (feature.geometry as Polygon).coordinates[0];
+      const centerLng = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+      const centerLat = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+      center = [centerLng, centerLat];
+    }
+
+    setSelectedParcels(prev => {
+      const existingIndex = prev.findIndex(p => p.properties.OBJECTID === properties.OBJECTID);
+      
+      if (isMultiSelectKey) {
+        // Multi-select mode
+        if (existingIndex >= 0) {
+          // Already selected - remove it and reorder remaining
+          const newSelection = prev.filter((_, i) => i !== existingIndex);
+          return newSelection.map((p, i) => ({ ...p, selectionOrder: i + 1 }));
+        } else {
+          // Add to selection
+          return [...prev, { properties, center, selectionOrder: prev.length + 1 }];
+        }
+      } else {
+        // Single select mode - replace selection
+        if (existingIndex >= 0 && prev.length === 1) {
+          // Clicking the only selected parcel - deselect
+          return [];
+        }
+        return [{ properties, center, selectionOrder: 1 }];
+      }
+    });
   }, []);
 
   const handleClosePanel = useCallback(() => {
-    setSelectedParcel(null);
+    setSelectedParcels([]);
+  }, []);
+
+  const handleRemoveParcel = useCallback((objectId: number) => {
+    setSelectedParcels(prev => {
+      const newSelection = prev.filter(p => p.properties.OBJECTID !== objectId);
+      return newSelection.map((p, i) => ({ ...p, selectionOrder: i + 1 }));
+    });
   }, []);
 
   const toggleLayer = useCallback((layer: keyof typeof visibleLayers) => {
@@ -264,7 +318,11 @@ export default function MapView({
         // Select the parcel and open details panel
         const parcelFeature = result.data as Feature<Polygon, ParcelProperties>;
         if (parcelFeature.properties) {
-          setSelectedParcel(parcelFeature.properties);
+          setSelectedParcels([{
+            properties: parcelFeature.properties,
+            center: result.coordinates,
+            selectionOrder: 1,
+          }]);
         }
         break;
       case "division":
@@ -421,6 +479,19 @@ export default function MapView({
     };
   }, [addressesData, divisionsData, visibleDivisions, findDivisionForPoint]);
 
+  // Create GeoJSON for selected parcels (for highlight layer)
+  const selectedParcelsGeoJSON = useMemo(() => {
+    if (selectedParcels.length === 0 || !parcelsData) return null;
+    
+    const selectedObjectIds = new Set(selectedParcels.map(p => p.properties.OBJECTID));
+    const features = parcelsData.features.filter(f => selectedObjectIds.has(f.properties.OBJECTID));
+    
+    return {
+      type: 'FeatureCollection' as const,
+      features,
+    };
+  }, [selectedParcels, parcelsData]);
+
   if (!MAPBOX_TOKEN) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white">
@@ -521,6 +592,29 @@ export default function MapView({
           </Source>
         )}
 
+        {/* Selected Parcels Highlight Layer */}
+        {selectedParcelsGeoJSON && selectedParcelsGeoJSON.features.length > 0 && (
+          <Source id="selected-parcels" type="geojson" data={selectedParcelsGeoJSON}>
+            <Layer
+              id="selected-parcels-fill"
+              type="fill"
+              paint={{
+                "fill-color": "#00D4FF",
+                "fill-opacity": 0.3,
+              }}
+            />
+            <Layer
+              id="selected-parcels-outline"
+              type="line"
+              paint={{
+                "line-color": "#00D4FF",
+                "line-width": 3,
+                "line-opacity": 1,
+              }}
+            />
+          </Source>
+        )}
+
         {/* Electoral Divisions Outlines Only - Show division boundaries */}
         {divisionsData && visibleLayers.divisions && (
           <>
@@ -595,6 +689,20 @@ export default function MapView({
             </Marker>
           </>
         )}
+
+        {/* Selection Number Markers */}
+        {selectedParcels.map((selected) => (
+          <Marker
+            key={`selection-${selected.properties.OBJECTID}`}
+            longitude={selected.center[0]}
+            latitude={selected.center[1]}
+            anchor="center"
+          >
+            <div className="flex items-center justify-center w-7 h-7 bg-cyan-500 text-white text-sm font-bold rounded-full border-2 border-white shadow-lg">
+              {selected.selectionOrder}
+            </div>
+          </Marker>
+        ))}
       </Map>
 
       {/* Hover Tooltip */}
@@ -655,13 +763,25 @@ export default function MapView({
         </div>
       )}
 
-      {/* Details Panel */}
-      <DetailsPanel
-        parcel={selectedParcel}
-        linkedAddress={selectedParcel?.LV_NUMBER ? addressLookup.get(selectedParcel.LV_NUMBER) || null : null}
-        owner={selectedParcel?.LV_NUMBER ? ownerLookup.get(selectedParcel.LV_NUMBER) || null : null}
-        onClose={handleClosePanel}
-      />
+      {/* Details Panel - for single selection */}
+      {selectedParcels.length === 1 && (
+        <DetailsPanel
+          parcel={selectedParcels[0].properties}
+          linkedAddress={selectedParcels[0].properties.LV_NUMBER ? addressLookup.get(selectedParcels[0].properties.LV_NUMBER) || null : null}
+          owner={selectedParcels[0].properties.LV_NUMBER ? ownerLookup.get(selectedParcels[0].properties.LV_NUMBER) || null : null}
+          onClose={handleClosePanel}
+        />
+      )}
+
+      {/* Multi-Parcel Panel - for multi-selection */}
+      {selectedParcels.length >= 2 && (
+        <MultiParcelPanel
+          selectedParcels={selectedParcels}
+          ownerLookup={ownerLookup}
+          onRemoveParcel={handleRemoveParcel}
+          onClearAll={handleClosePanel}
+        />
+      )}
     </div>
   );
 }
