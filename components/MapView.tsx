@@ -30,6 +30,7 @@ import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
 import MultiParcelPanel from "./MultiParcelPanel";
 import SearchBar, { type SearchResult } from "./SearchBar";
+import SideNav from "./SideNav";
 import type { Address } from "@/lib/data/addresses";
 import type { Owner } from "@/lib/data/owners";
 
@@ -901,7 +902,16 @@ export default function MapView({
         onResultSelect={handleSearchResult}
       />
 
-      {/* Layer Controls */}
+      {/* Side Navigation */}
+      <SideNav
+        savedProjects={savedProjects}
+        activeProjectId={activeProjectId}
+        onLoadProject={handleLoadProject}
+        onRenameProject={handleRenameProject}
+        onDeleteProject={handleDeleteProject}
+      />
+
+      {/* Layer Controls - offset for nav rail */}
       <LayerControls
         visibleLayers={visibleLayers}
         onToggleLayer={toggleLayer}
@@ -917,11 +927,6 @@ export default function MapView({
         sizeRange={sizeRange}
         sizeBounds={sizeBounds}
         onSizeRangeChange={setSizeRange}
-        savedProjects={savedProjects}
-        activeProjectId={activeProjectId}
-        onLoadProject={handleLoadProject}
-        onRenameProject={handleRenameProject}
-        onDeleteProject={handleDeleteProject}
       />
 
       {/* Stats Card - Top Right */}

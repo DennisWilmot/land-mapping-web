@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { MapStyle } from "./MapView";
 import type { DivisionName } from "@/lib/geo/electoral-divisions";
 import { ELECTORAL_DIVISION_COLORS } from "@/lib/geo/electoral-divisions";
-import type { SavedProject } from "@/lib/types/project";
 
 // Chevron icon for collapse/expand
 function ChevronIcon({ expanded }: { expanded: boolean }) {
@@ -55,12 +54,6 @@ interface LayerControlsProps {
   sizeRange: SizeRange;
   sizeBounds: SizeRange;
   onSizeRangeChange: (range: SizeRange) => void;
-  // Projects
-  savedProjects: SavedProject[];
-  activeProjectId: string | null;
-  onLoadProject: (id: string) => void;
-  onRenameProject: (id: string, name: string) => void;
-  onDeleteProject: (id: string) => void;
 }
 
 // Icon components for legend
@@ -383,139 +376,6 @@ function SizeRangeSlider({
   );
 }
 
-// Format date for display
-function formatDate(timestamp: number): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-// Project Item Component
-function ProjectItem({
-  project,
-  isActive,
-  onLoad,
-  onRename,
-  onDelete,
-}: {
-  project: SavedProject;
-  isActive: boolean;
-  onLoad: () => void;
-  onRename: (name: string) => void;
-  onDelete: () => void;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(project.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSaveRename = () => {
-    if (editName.trim() && editName.trim() !== project.name) {
-      onRename(editName.trim());
-    }
-    setIsEditing(false);
-  };
-
-  return (
-    <div
-      className={`group rounded-lg p-2.5 transition-all cursor-pointer ${
-        isActive
-          ? "bg-purple-600/20 border border-purple-500/50"
-          : "bg-slate-800/50 border border-transparent hover:bg-slate-700/50 hover:border-slate-600"
-      }`}
-      onClick={() => !isEditing && onLoad()}
-    >
-      {isEditing ? (
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSaveRename();
-              if (e.key === "Escape") {
-                setEditName(project.name);
-                setIsEditing(false);
-              }
-            }}
-            onBlur={handleSaveRename}
-            className="flex-1 px-2 py-1 text-sm bg-slate-900 border border-purple-500 rounded text-white focus:outline-none"
-          />
-        </div>
-      ) : (
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              {isActive && (
-                <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
-              )}
-              <span className="text-sm text-white font-medium truncate">
-                {project.name}
-              </span>
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5">
-              {project.parcelIds.length} parcels · {formatDate(project.updatedAt)}
-            </div>
-          </div>
-          
-          {/* Action buttons - show on hover */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-              }}
-              className="p-1 hover:bg-slate-600 rounded transition-colors"
-              title="Rename"
-            >
-              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Delete project "${project.name}"?`)) {
-                  onDelete();
-                }
-              }}
-              className="p-1 hover:bg-red-600/20 rounded transition-colors"
-              title="Delete"
-            >
-              <svg className="w-3.5 h-3.5 text-slate-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Folder/Bookmark icon for saved selections
-function BookmarkIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-    </svg>
-  );
-}
-
 export default function LayerControls({
   visibleLayers,
   onToggleLayer,
@@ -531,17 +391,11 @@ export default function LayerControls({
   sizeRange,
   sizeBounds,
   onSizeRangeChange,
-  savedProjects,
-  activeProjectId,
-  onLoadProject,
-  onRenameProject,
-  onDeleteProject,
 }: LayerControlsProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [projectsExpanded, setProjectsExpanded] = useState(true);
 
   return (
-    <div className="absolute top-4 left-4 z-10 glass-panel min-w-[220px] max-w-[280px] flex flex-col max-h-[calc(100vh-120px)]">
+    <div className="absolute top-4 left-20 z-10 glass-panel min-w-[220px] max-w-[280px] flex flex-col max-h-[calc(100vh-120px)]">
       {/* Header - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -694,51 +548,6 @@ export default function LayerControls({
             >
               Streets
             </button>
-          </div>
-
-          {/* Projects Section */}
-          <div>
-            <button
-              onClick={() => setProjectsExpanded(!projectsExpanded)}
-              className="flex items-center justify-between w-full mb-3 group"
-            >
-              <div className="flex items-center gap-2">
-                <BookmarkIcon />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300">
-                  Projects
-                </h3>
-                {savedProjects.length > 0 && (
-                  <span className="text-xs text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded">
-                    {savedProjects.length}
-                  </span>
-                )}
-              </div>
-              <ChevronIcon expanded={projectsExpanded} />
-            </button>
-
-            {projectsExpanded && (
-              <div className="space-y-2">
-                {savedProjects.length === 0 ? (
-                  <div className="text-xs text-slate-500 text-center py-4 px-2 bg-slate-800/30 rounded-lg">
-                    <p>No projects yet</p>
-                    <p className="mt-1 text-slate-600">
-                      Select parcels and click "Save Project" to create one
-                    </p>
-                  </div>
-                ) : (
-                  savedProjects.map((project) => (
-                    <ProjectItem
-                      key={project.id}
-                      project={project}
-                      isActive={activeProjectId === project.id}
-                      onLoad={() => onLoadProject(project.id)}
-                      onRename={(name) => onRenameProject(project.id, name)}
-                      onDelete={() => onDeleteProject(project.id)}
-                    />
-                  ))
-                )}
-              </div>
-            )}
           </div>
         </div>
       )}
