@@ -23,6 +23,7 @@ import {
 } from "@/lib/geo/electoral-divisions";
 import type { ParcelProperties } from "@/lib/data/parcels";
 import { formatParcelSize } from "@/lib/data/parcels";
+import { useSavedSelections } from "@/lib/hooks/useSavedSelections";
 import LayerControls from "./LayerControls";
 import DetailsPanel from "./DetailsPanel";
 import MultiParcelPanel from "./MultiParcelPanel";
@@ -86,6 +87,18 @@ export default function MapView({
   });
   const [divisionsData, setDivisionsData] = useState<Record<DivisionName, FeatureCollection<Polygon | MultiPolygon, DivisionProperties>> | null>(null);
   const [sizeRange, setSizeRange] = useState<{ min: number; max: number }>({ min: 0, max: Infinity });
+
+  // Saved selections
+  const {
+    selections: savedSelections,
+    saveSelection,
+    updateSelection,
+    renameSelection,
+    deleteSelection,
+    getSelection,
+  } = useSavedSelections();
+  const [activeSelectionId, setActiveSelectionId] = useState<string | null>(null);
+  const [activeSelectionName, setActiveSelectionName] = useState<string | null>(null);
 
   // Compute size bounds from parcel data (capped at 2,500 acres max for usable slider)
   const MAX_ACRES = 2500;
@@ -291,6 +304,96 @@ export default function MapView({
       const newSelection = prev.filter(p => p.properties.OBJECTID !== objectId);
       return newSelection.map((p, i) => ({ ...p, selectionOrder: i + 1 }));
     });
+  }, []);
+
+  // Handle parcel reordering from drag-and-drop
+  const handleReorderParcels = useCallback((reorderedParcels: SelectedParcel[]) => {
+    setSelectedParcels(reorderedParcels);
+  }, []);
+
+  // Save a new selection
+  const handleSaveSelection = useCallback((name: string) => {
+    const parcelIds = selectedParcels.map(p => p.properties.OBJECTID);
+    const newSelection = saveSelection(name, parcelIds);
+    setActiveSelectionId(newSelection.id);
+    setActiveSelectionName(newSelection.name);
+  }, [selectedParcels, saveSelection]);
+
+  // Update the active selection with current parcels
+  const handleUpdateSelection = useCallback(() => {
+    if (!activeSelectionId) return;
+    const parcelIds = selectedParcels.map(p => p.properties.OBJECTID);
+    updateSelection(activeSelectionId, parcelIds);
+  }, [activeSelectionId, selectedParcels, updateSelection]);
+
+  // Load a saved selection - restore parcels on map
+  const handleLoadSelection = useCallback((selectionId: string) => {
+    const selection = getSelection(selectionId);
+    if (!selection || !parcelsData) return;
+
+    // Build a lookup of all parcels by OBJECTID
+    const parcelLookup: Record<number, Feature<Polygon, ParcelProperties>> = {};
+    for (const feature of parcelsData.features) {
+      if (feature.properties?.OBJECTID) {
+        parcelLookup[feature.properties.OBJECTID] = feature;
+      }
+    }
+
+    // Restore the selected parcels in order
+    const restoredParcels: SelectedParcel[] = [];
+    for (let i = 0; i < selection.parcelIds.length; i++) {
+      const objectId = selection.parcelIds[i];
+      const feature = parcelLookup[objectId];
+      if (feature && feature.properties) {
+        const center = centroid(feature);
+        const coords = center.geometry.coordinates as [number, number];
+        restoredParcels.push({
+          properties: feature.properties,
+          center: coords,
+          selectionOrder: i + 1,
+        });
+      }
+    }
+
+    setSelectedParcels(restoredParcels);
+    setActiveSelectionId(selectionId);
+    setActiveSelectionName(selection.name);
+
+    // Optionally fly to the first parcel
+    if (restoredParcels.length > 0 && mapRef.current) {
+      const [lng, lat] = restoredParcels[0].center;
+      mapRef.current.getMap().flyTo({
+        center: [lng, lat],
+        zoom: 14,
+        duration: 1500,
+      });
+    }
+  }, [getSelection, parcelsData]);
+
+  // Handle renaming a selection
+  const handleRenameSelection = useCallback((id: string, name: string) => {
+    renameSelection(id, name);
+    // Update active name if this is the active selection
+    if (id === activeSelectionId) {
+      setActiveSelectionName(name);
+    }
+  }, [renameSelection, activeSelectionId]);
+
+  // Handle deleting a selection
+  const handleDeleteSelection = useCallback((id: string) => {
+    deleteSelection(id);
+    // Clear active selection if this was it
+    if (id === activeSelectionId) {
+      setActiveSelectionId(null);
+      setActiveSelectionName(null);
+    }
+  }, [deleteSelection, activeSelectionId]);
+
+  // Clear active selection when parcels are manually cleared
+  const handleCloseAndClearActive = useCallback(() => {
+    setSelectedParcels([]);
+    setActiveSelectionId(null);
+    setActiveSelectionName(null);
   }, []);
 
   const toggleLayer = useCallback((layer: keyof typeof visibleLayers) => {
@@ -749,6 +852,11 @@ export default function MapView({
         sizeRange={sizeRange}
         sizeBounds={sizeBounds}
         onSizeRangeChange={setSizeRange}
+        savedSelections={savedSelections}
+        activeSelectionId={activeSelectionId}
+        onLoadSelection={handleLoadSelection}
+        onRenameSelection={handleRenameSelection}
+        onDeleteSelection={handleDeleteSelection}
       />
 
       {/* Stats Card - Top Right */}
@@ -779,7 +887,12 @@ export default function MapView({
           selectedParcels={selectedParcels}
           ownerLookup={ownerLookup}
           onRemoveParcel={handleRemoveParcel}
-          onClearAll={handleClosePanel}
+          onClearAll={handleCloseAndClearActive}
+          onReorderParcels={handleReorderParcels}
+          onSaveSelection={handleSaveSelection}
+          onUpdateSelection={handleUpdateSelection}
+          activeSelectionId={activeSelectionId}
+          activeSelectionName={activeSelectionName}
         />
       )}
     </div>
