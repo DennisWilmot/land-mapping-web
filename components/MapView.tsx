@@ -59,7 +59,12 @@ export default function MapView({
     divisions: true,
     parcels: true,
     addresses: false,
+    starlink: true,
+    roads: false,
+    water: true,
   });
+  const [starlinkData, setStarlinkData] = useState<FeatureCollection<Point> | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
   
   const [hoveredFeature, setHoveredFeature] = useState<HoveredFeature | null>(null);
   const [selectedParcel, setSelectedParcel] = useState<ParcelProperties | null>(null);
@@ -113,6 +118,44 @@ export default function MapView({
       })
       .catch(err => console.error('Failed to load electoral divisions:', err));
   }, []);
+
+  // Load Starlink data
+  useEffect(() => {
+    fetch('/data/starlink.json')
+      .then(res => res.json())
+      .then(data => setStarlinkData(data))
+      .catch(err => console.error('Failed to load Starlink data:', err));
+  }, []);
+
+  // Toggle Mapbox built-in road and water layer visibility
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.isStyleLoaded()) return;
+
+    const layers = map.getStyle()?.layers || [];
+    
+    // Toggle road layers
+    layers.forEach(layer => {
+      if (layer.id.includes('road') || layer.id.includes('bridge') || layer.id.includes('tunnel')) {
+        try {
+          map.setLayoutProperty(layer.id, 'visibility', visibleLayers.roads ? 'visible' : 'none');
+        } catch (e) {
+          // Some layers may not support visibility toggle
+        }
+      }
+    });
+
+    // Toggle water layers
+    layers.forEach(layer => {
+      if (layer.id.includes('water')) {
+        try {
+          map.setLayoutProperty(layer.id, 'visibility', visibleLayers.water ? 'visible' : 'none');
+        } catch (e) {
+          // Some layers may not support visibility toggle
+        }
+      }
+    });
+  }, [visibleLayers.roads, visibleLayers.water, mapStyle, mapLoaded]);
 
   const mapStyleUrl = useMemo(() => {
     return mapStyle === "satellite"
@@ -316,6 +359,30 @@ export default function MapView({
     };
   }, [preprocessedParcels, nemCount, withOwnersCount, nemOnly, ownersOnly, visibleDivisions, sizeRange]);
 
+  // Filter addresses by visible divisions (only show addresses INSIDE a visible division)
+  const filteredAddresses = useMemo(() => {
+    if (!addressesData || !divisionsData) return null;
+    
+    const filteredFeatures = addressesData.features.filter(feature => {
+      const point: Feature<Point> = {
+        type: 'Feature',
+        geometry: feature.geometry,
+        properties: {}
+      };
+      const division = findDivisionForPoint(point);
+      
+      // Only show addresses that are inside a division AND that division is visible
+      if (!division) return false;
+      
+      return visibleDivisions[division];
+    });
+    
+    return {
+      type: 'FeatureCollection' as const,
+      features: filteredFeatures,
+    };
+  }, [addressesData, divisionsData, visibleDivisions, findDivisionForPoint]);
+
   if (!MAPBOX_TOKEN) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white">
@@ -347,6 +414,7 @@ export default function MapView({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
+        onLoad={() => setMapLoaded(true)}
         interactiveLayerIds={["parcels-fill"]}
         cursor={hoveredFeature ? "pointer" : "grab"}
       >
@@ -439,9 +507,9 @@ export default function MapView({
           </>
         )}
 
-        {/* Addresses Layer */}
-        {addressesData && (
-          <Source id="addresses" type="geojson" data={addressesData}>
+        {/* Addresses Layer - filtered by visible divisions */}
+        {filteredAddresses && (
+          <Source id="addresses" type="geojson" data={filteredAddresses}>
             <Layer
               id="addresses-points"
               type="circle"
@@ -452,6 +520,24 @@ export default function MapView({
                 "circle-stroke-color": "#ffffff",
                 "circle-opacity": visibleLayers.addresses ? 0.8 : 0,
                 "circle-stroke-opacity": visibleLayers.addresses ? 1 : 0,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Starlink Sites Layer */}
+        {starlinkData && (
+          <Source id="starlink" type="geojson" data={starlinkData}>
+            <Layer
+              id="starlink-points"
+              type="circle"
+              paint={{
+                "circle-radius": 8,
+                "circle-color": "#00BCD4",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+                "circle-opacity": visibleLayers.starlink ? 0.9 : 0,
+                "circle-stroke-opacity": visibleLayers.starlink ? 1 : 0,
               }}
             />
           </Source>

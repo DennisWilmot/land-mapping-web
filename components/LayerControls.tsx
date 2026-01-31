@@ -37,8 +37,11 @@ interface LayerControlsProps {
     divisions: boolean;
     parcels: boolean;
     addresses: boolean;
+    starlink: boolean;
+    roads: boolean;
+    water: boolean;
   };
-  onToggleLayer: (layer: "boundary" | "divisions" | "parcels" | "addresses") => void;
+  onToggleLayer: (layer: "boundary" | "divisions" | "parcels" | "addresses" | "starlink" | "roads" | "water") => void;
   mapStyle: MapStyle;
   onToggleMapStyle: () => void;
   nemOnly: boolean;
@@ -99,7 +102,46 @@ function DotIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
   );
 }
 
-type IconType = "parcel" | "boundary" | "point" | "dot";
+function SatelliteIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" style={{ opacity }}>
+      {/* Satellite body */}
+      <rect x="5" y="5" width="6" height="6" rx="1" fill={color} />
+      {/* Solar panels */}
+      <rect x="1" y="6.5" width="3" height="3" fill={color} fillOpacity={0.7} />
+      <rect x="12" y="6.5" width="3" height="3" fill={color} fillOpacity={0.7} />
+      {/* Signal waves */}
+      <path d="M11 2 Q14 5 11 8" fill="none" stroke={color} strokeWidth="1" strokeOpacity={0.5} />
+      <path d="M12.5 1 Q16 5 12.5 9" fill="none" stroke={color} strokeWidth="1" strokeOpacity={0.3} />
+    </svg>
+  );
+}
+
+function RoadIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" style={{ opacity }}>
+      {/* Road surface */}
+      <path d="M0,12 L4,2 L12,2 L16,12 Z" fill={color} fillOpacity={0.3} />
+      {/* Center dashed line */}
+      <path d="M8,3 L8,5 M8,7 L8,9 M8,11 L8,12" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      {/* Road edges */}
+      <path d="M4,2 L2,12" stroke={color} strokeWidth="1.5" />
+      <path d="M12,2 L14,12" stroke={color} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function WaterIcon({ color, opacity = 1 }: { color: string; opacity?: number }) {
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" style={{ opacity }}>
+      {/* Water waves */}
+      <path d="M1,5 Q4,2 7,5 T13,5" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M1,9 Q4,6 7,9 T13,9" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeOpacity={0.6} />
+    </svg>
+  );
+}
+
+type IconType = "parcel" | "boundary" | "point" | "dot" | "satellite" | "road" | "water";
 
 function Toggle({
   active,
@@ -124,6 +166,12 @@ function Toggle({
         return <BoundaryIcon color={color} opacity={opacity} />;
       case "point":
         return <PointIcon color={color} opacity={opacity} />;
+      case "satellite":
+        return <SatelliteIcon color={color} opacity={opacity} />;
+      case "road":
+        return <RoadIcon color={color} opacity={opacity} />;
+      case "water":
+        return <WaterIcon color={color} opacity={opacity} />;
       default:
         return <DotIcon color={color} opacity={opacity} />;
     }
@@ -415,6 +463,27 @@ export default function LayerControls({
               label="Addresses"
               color="#F59E0B"
               icon="point"
+            />
+            <Toggle
+              active={visibleLayers.starlink}
+              onClick={() => onToggleLayer("starlink")}
+              label="Starlink Sites"
+              color="#00BCD4"
+              icon="satellite"
+            />
+            <Toggle
+              active={visibleLayers.roads}
+              onClick={() => onToggleLayer("roads")}
+              label="Roads"
+              color="#757575"
+              icon="road"
+            />
+            <Toggle
+              active={visibleLayers.water}
+              onClick={() => onToggleLayer("water")}
+              label="Water"
+              color="#2196F3"
+              icon="water"
             />
           </div>
 

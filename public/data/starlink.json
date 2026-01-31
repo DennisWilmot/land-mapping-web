@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Starlink Site 1", "provider": "Starlink" },
+      "geometry": { "type": "Point", "coordinates": [-77.503896, 18.026719] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Starlink Site 2", "provider": "Starlink" },
+      "geometry": { "type": "Point", "coordinates": [-77.515448, 18.14836] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Starlink Site 3", "provider": "Starlink" },
+      "geometry": { "type": "Point", "coordinates": [-77.505768, 18.19242] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Starlink Site 4", "provider": "Starlink" },
+      "geometry": { "type": "Point", "coordinates": [-77.508898, 18.19489] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Starlink Site 5", "provider": "Starlink" },
+      "geometry": { "type": "Point", "coordinates": [-77.496348, 18.189401] }
+    }
+  ]
+}
